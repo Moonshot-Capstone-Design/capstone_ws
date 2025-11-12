@@ -28,7 +28,7 @@ class MDTeleop(Node):
         #   left stick vertical (Y): msg.axes[1]
         #   right stick horizontal (X): msg.axes[3]
         linear = msg.axes[1]   # 전/후
-        angular = msg.axes[3]  # 좌/우
+        angular = msg.axes[2]  # 좌/우
 
         # 속도 계산 (차동 제어)
         vL = int(self.max_speed * (linear - angular))
