@@ -11,6 +11,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name, ['launch/serial_test.launch.py']),
+        ('share/' + package_name, ['launch/teleop_launch.launch.py']),
 
     ],
     install_requires=['setuptools'],
