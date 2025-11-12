@@ -27,6 +27,7 @@ setup(
     entry_points={
         'console_scripts': [
             'test_node = serial_test.test_node_main:main',
+            'md_teleop_node = serial_comm.md_teleop:main',
         ],
     },
 )
