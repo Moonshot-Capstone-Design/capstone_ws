@@ -6,7 +6,7 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Joy
-from motor_driver import MotorDriver  # 네 기존 MotorDriver 코드 import
+from serial_comm.motor_driver import MotorDriver
 
 class MDTeleop(Node):
     def __init__(self):
