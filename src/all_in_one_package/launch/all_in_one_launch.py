@@ -10,8 +10,8 @@ def generate_launch_description():
         # First Launch: serial_test
         # IncludeLaunchDescription(
         #     PythonLaunchDescriptionSource([os.path.join(
-        #         get_package_share_directory('serial_test')),
-        #         '/serial_test.launch.py'])
+        #         get_package_share_directory('serial_comm')),
+        #         '/serial_comm.launch.py'])
         # ),        # Second Launch: sllidar_ros2 after 5 seconds
         TimerAction(
             period=2.0,

@@ -10,7 +10,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        ('share/' + package_name, ['launch/serial_test.launch.py']),
+        ('share/' + package_name, ['launch/serial_comm.launch.py']),
         ('share/' + package_name, ['launch/teleop_launch.launch.py']),
 
     ],
@@ -27,7 +27,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'base_main_node = serial_test.base_main:main',
+            'base_main_node = serial_comm.base_main:main',
             'md_teleop_node = serial_comm.md_teleop:main',
         ],
     },
