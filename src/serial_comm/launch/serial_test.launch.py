@@ -8,6 +8,14 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 def generate_launch_description():
     ld = LaunchDescription()
 
+    node = Node(
+        package="serial_comm",
+        executable="base_main_node",
+        name="base_main_node",
+        output="screen"
+    )
+
+    ld.add_action(node)
     node_joy = Node(
         package="joy",
         executable="joy_node",

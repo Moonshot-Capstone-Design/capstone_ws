@@ -231,9 +231,3 @@ if __name__ == "__main__":
     # 2) 잠깐 대기 후 들어오는 상태 패킷을 한 번 읽어본다
     time.sleep(0.1)
     md.recv_motor_state()
-
-    # while True:
-    #     md.send_vel_cmd(0, 0)
-    #     time.sleep(0.1)
-    #     md.recv_motor_state()
-    #     time.sleep(0.1)

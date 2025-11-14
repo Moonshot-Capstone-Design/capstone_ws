@@ -7,6 +7,7 @@ from geometry_msgs.msg import Twist, TransformStamped
 from nav_msgs.msg import Odometry
 from tf2_ros import TransformBroadcaster, TransformListener, Buffer
 from tf_transformations import quaternion_from_euler, euler_from_quaternion
+from sensor_msgs.msg import JointState
 
 from rclpy.qos import qos_profile_sensor_data, QoSProfile, ReliabilityPolicy, DurabilityPolicy
 
@@ -93,6 +94,12 @@ class Nodelet(Node):
         self.cur_pos2 = 0.0
         self.del_pos1 = 0.0
         self.del_pos2 = 0.0
+
+        # joint state publisher (for wheel TF in RViz)
+        self.joint_pub = self.create_publisher(JointState, '/joint_states', 10)
+        self.wheel_left_angle  = 0.0  # rad
+        self.wheel_right_angle = 0.0  # rad
+
 
         # cmd_vel param
         self.cmd_vel_r = 0.0
@@ -194,6 +201,20 @@ class Nodelet(Node):
         current_time = self.get_clock().now()
         dt = (current_time - self.last_time).nanoseconds / 1e9
         self.last_time = current_time
+
+        # 3-1) 바퀴 회전각(rad) 업데이트 (distance / radius)
+        radius = self.wheel_diameter / 2.0
+        if radius > 0.0:
+            self.wheel_left_angle  += left_wheel_disp  / radius
+            self.wheel_right_angle += right_wheel_disp / radius
+
+        # 3-2) JointState publish → robot_state_publisher가 wheel TF 갱신
+        js = JointState()
+        js.header.stamp = current_time.to_msg()
+        js.name = ['wheel_left_joint', 'wheel_right_joint']
+        js.position = [self.wheel_left_angle, self.wheel_right_angle]
+        # velocity, effort는 필요 없으면 생략 가능
+        self.joint_pub.publish(js)
 
         linear_velocity = (left_wheel_disp + right_wheel_disp) / (2.0 * dt)
         angular_velocity = (right_wheel_disp - left_wheel_disp) / (self.wheel_separation * dt)

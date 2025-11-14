@@ -24,15 +24,15 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import ThisLaunchFileDir
 def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time', default='false')
-    amr_cartographer_prefix = get_package_share_directory('serial_test')
+    amr_cartographer_prefix = get_package_share_directory('amr_cartographer')
     cartographer_config_dir = LaunchConfiguration('cartographer_config_dir', default=os.path.join(
                                                   amr_cartographer_prefix, 'config'))
     configuration_basename = LaunchConfiguration('configuration_basename',
                                                  default='amr.lua')
-    resolution = LaunchConfiguration('resolution', default='0.05')
+    resolution = LaunchConfiguration('resolution', default='0.03') ##0.05
     publish_period_sec = LaunchConfiguration('publish_period_sec', default='1.0')
-    rviz_config_dir = os.path.join(get_package_share_directory('serial_test'),
-                                   'rviz', 'amr_cartographer.rviz')
+    rviz_config_dir = os.path.join(get_package_share_directory('amr_cartographer'),
+                                   'rviz', 'rviz.rviz')
     return LaunchDescription([
         DeclareLaunchArgument(
             'cartographer_config_dir',

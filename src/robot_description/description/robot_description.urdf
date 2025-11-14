@@ -163,19 +163,21 @@
     <origin xyz="0 0 0.001" rpy="0 0 0"/>
   </joint>
 
-  <joint name="wheel_left_joint" type="fixed">
-    <parent link="chassis"/>
-    <child link="wheel_left_link"/>
-    <!-- 좌우 0.16m, base_link 기준 z -0.065m -->
-    <origin xyz="0 0.16 -0.065" rpy="-1.57 0 0"/>
-  </joint>
+<joint name="wheel_left_joint" type="continuous">
+  <parent link="chassis"/>
+  <child link="wheel_left_link"/>
+  <origin xyz="0 0.16 -0.065" rpy="-1.57 0 0"/>
+  <!-- 바퀴가 y축 기준으로 도는 구조라면 -->
+  <axis xyz="0 1 0"/>
+</joint>
 
-  <joint name="wheel_right_joint" type="fixed">
-    <parent link="chassis"/>
-    <child link="wheel_right_link"/>
-    <!-- 우측이므로 y 음수, z -0.065m -->
-    <origin xyz="0 -0.16 -0.065" rpy="1.57 0 0"/>
-  </joint>
+<joint name="wheel_right_joint" type="continuous">
+  <parent link="chassis"/>
+  <child link="wheel_right_link"/>
+  <origin xyz="0 -0.16 -0.065" rpy="1.57 0 0"/>
+  <axis xyz="0 1 0"/>
+</joint>
+
 
   <!-- Central fused laser frame -->
   <joint name="lidar_joint" type="fixed">
