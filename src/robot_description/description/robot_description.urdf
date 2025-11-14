@@ -1,26 +1,25 @@
 <robot name="amr">
 
-  <material name= "white">
+  <material name="white">
     <color rgba="1 1 1 1" />
   </material>
 
-  <material name= "orange">
+  <material name="orange">
     <color rgba="1 0.3 0.1 1" />
   </material>
 
-  <material name= "blue">
+  <material name="blue">
     <color rgba="0.2 0.2 1 1" />
   </material>
 
-  <material name= "black">
+  <material name="black">
     <color rgba="0 0 0 1" />
   </material>
 
-  <material name= "red">
+  <material name="red">
     <color rgba="1 0 0 1" />
   </material>
 
- 
   <!-- Base Footprint -->
   <link name="base_link"/>
 
@@ -29,34 +28,35 @@
     <inertial>
       <origin xyz="0 0 0.18" rpy="0 0 0"/>
       <mass value="1.37291"/>
-      <inertia ixx="0.0421114" ixy="0" ixz="0" iyy="0.0421114" iyz="0" izz="0.0752549"/>
+      <inertia ixx="0.0421114" ixy="0" ixz="0"
+               iyy="0.0421114" iyz="0" izz="0.0752549"/>
     </inertial>
+
     <collision name="base_collision">
       <origin xyz="0 0 0.3" rpy="0 0 0"/>
       <geometry>
         <box size="0.6 0.35 0.1"/>
       </geometry>
     </collision>
+
     <visual name="base_visual">
       <geometry>
-         <mesh filename="package://amr_demo/description/meshes/amr_body.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://amr_demo/description/meshes/amr_body.stl"
+              scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="white"/>
     </visual>
   </link>
 
+  <!-- Center laser (fusion frame) -->
   <link name="laser">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <mass value="0.114"/>
-      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+      <inertia ixx="0.001" ixy="0" ixz="0"
+               iyy="0.001" iyz="0" izz="0.001"/>
     </inertial>
-    <!-- <collision name="lidar_sensor_collision">
-      <origin xyz="-0.052 0 0.2" rpy="0 0 0"/>
-      <geometry>
-        <cylinder radius="0.0508" length="0.055"/>
-      </geometry>
-    </collision> -->
+
     <visual name="laser_visual">
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
@@ -65,19 +65,16 @@
       <material name="black"/>
     </visual>
   </link>
-  
-   <link name="lidar2_link">
+
+  <!-- Front / Rear real LiDARs -->
+  <link name="lidar2_link">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <mass value="0.114"/>
-      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+      <inertia ixx="0.001" ixy="0" ixz="0"
+               iyy="0.001" iyz="0" izz="0.001"/>
     </inertial>
-    <!-- <collision name="lidar_sensor_collision">
-      <origin xyz="-0.052 0 0.2" rpy="0 0 0"/>
-      <geometry>
-        <cylinder radius="0.0508" length="0.055"/>
-      </geometry>
-    </collision> -->
+
     <visual name="lidar2_visual">
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
@@ -91,73 +88,41 @@
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <mass value="0.114"/>
-      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+      <inertia ixx="0.001" ixy="0" ixz="0"
+               iyy="0.001" iyz="0" izz="0.001"/>
     </inertial>
-    <!-- <collision name="lidar_sensor_collision">
-      <origin xyz="-0.052 0 0.2" rpy="0 0 0"/>
-      <geometry>
-        <cylinder radius="0.0508" length="0.055"/>
-      </geometry>
-    </collision> -->
+
     <visual name="lidar1_visual">
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
         <cylinder radius="0.0385" length="0.03885"/>
       </geometry>
-       <material name="black"/>
+      <material name="black"/>
     </visual>
-    <!-- <sensor name="hls_lfcd_lds" type="ray">
-      <origin xyz="-0.064 0 0.2" rpy="0 0 0"/>
-      <update_rate value="5"/>
-      <ray>
-        <scan>
-          <horizontal>
-            <samples value="360"/>
-            <resolution value="1"/>
-            <min_angle value="0"/>
-            <max_angle value="6.28"/>
-          </horizontal>
-        </scan>
-        <range>
-          <min value="0.12"/>
-          <max value="30"/>
-          <resolution value="0.015"/>
-        </range>
-        <noise>
-          <type>gaussian</type>
-          <mean>0</mean>
-          <stddev>0.01</stddev>
-        </noise>
-      </ray>
-      <plugin name="turtlebot3_laserscan" filename="libgazebo_ros_ray_sensor.so">
-        <ros>
-          <remapping>~/out:=scan</remapping>
-        </ros>
-        <output_type>sensor_msgs/LaserScan</output_type>
-        <frame_name>base_scan</frame_name>
-      </plugin>
-    </sensor> -->
   </link>
-
 
   <!-- Left Wheel Link -->
   <link name="wheel_left_link">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <mass value="0.1"/>
-      <inertia ixx="1.11756e-05" ixy="-4.23698e-11" ixz="-5.93817e-09" iyy="1.11924e-05" iyz="-1.44001e-11" izz="2.07126e-05"/>
+      <inertia ixx="1.11756e-05" ixy="-4.23698e-11" ixz="-5.93817e-09"
+               iyy="1.11924e-05" iyz="-1.44001e-11" izz="2.07126e-05"/>
     </inertial>
+
     <collision name="wheel_left_collision">
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <cylinder radius="0.085" length="0.046"/>
+        <!-- φ130mm → radius 0.065 -->
+        <cylinder radius="0.065" length="0.046"/>
       </geometry>
-
     </collision>
+
     <visual name="wheel_left_visual">
       <origin xyz="0 0 0" rpy="-1.57 0 0"/>
       <geometry>
-        <mesh filename="package://amr_demo/description/meshes/amr_wheel.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://amr_demo/description/meshes/amr_wheel.stl"
+              scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="black"/>
     </visual>
@@ -168,222 +133,29 @@
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <mass value="0.1"/>
-      <inertia ixx="1.11756e-05" ixy="-4.23698e-11" ixz="-5.93817e-09" iyy="1.11924e-05" iyz="-1.44001e-11" izz="2.07126e-05"/>
+      <inertia ixx="1.11756e-05" ixy="-4.23698e-11" ixz="-5.93817e-09"
+               iyy="1.11924e-05" iyz="-1.44001e-11" izz="2.07126e-05"/>
     </inertial>
+
     <collision name="wheel_right_collision">
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <cylinder radius="0.085" length="0.046"/>
+        <!-- φ130mm → radius 0.065 -->
+        <cylinder radius="0.065" length="0.046"/>
       </geometry>
-
     </collision>
+
     <visual name="wheel_right_visual">
       <origin xyz="0 0 0" rpy="-1.57 0 0"/>
       <geometry>
-        <mesh filename="package://amr_demo/description/meshes/amr_wheel.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="package://amr_demo/description/meshes/amr_wheel.stl"
+              scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="black"/>
     </visual>
   </link>
 
-  <!-- Other links and joints (similar structure) -->
-  <!-- caster sup link-->
-  <link name='caster_back_right_link'>
-      <inertial>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <mass value="0.1"/>
-        <inertia ixx="1.11756e-05" ixy="-4.23698e-11" ixz="-5.93817e-09" iyy="1.11924e-05" iyz="-1.44001e-11" izz="2.07126e-05"/>
-      </inertial>
-      
-      
-      <visual name='caster_back_right_visual'>
-        <!-- <pose>-0.2 -0.13 0.068 0 0 0</pose> -->
-        <geometry>
-            <mesh filename="package://amr_demo/description/meshes/amr_caster_sup.stl" scale="0.001 0.001 0.001"/>
-        </geometry>
-        <material name="orange"/>
-      </visual>
-  </link>
-
-  <link name='caster_back_left_link'>
-      <inertial>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <mass value="0.1"/>
-        <inertia ixx="1.11756e-05" ixy="-4.23698e-11" ixz="-5.93817e-09" iyy="1.11924e-05" iyz="-1.44001e-11" izz="2.07126e-05"/>
-      </inertial>
-      <!-- <inertial>
-        <pose>-0.2 0.13 0.068 0 0 0</pose>
-        <mass>0.001</mass>
-        <inertia>
-          <ixx>0.00001</ixx>
-          <ixy>0.000</ixy>
-          <ixz>0.000</ixz>
-          <iyy>0.00001</iyy>
-          <iyz>0.000</iyz>
-          <izz>0.00001</izz>
-        </inertia>
-      </inertial> -->
-       
-      <visual name='caster_back_left_visual'>
-        <!-- <pose>-0.2 0.13 0.068 0 0 0</pose> -->
-        <geometry>
-            <mesh filename="package://amr_demo/description/meshes/amr_caster_sup.stl" scale="0.001 0.001 0.001"/>
-        </geometry>
-        <material name="orange"/>
-      </visual>
-  </link>
-    
-
-  <link name='caster_front_right_link'>
-      <inertial>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <mass value="0.1"/>
-        <inertia ixx="1.11756e-05" ixy="-4.23698e-11" ixz="-5.93817e-09" iyy="1.11924e-05" iyz="-1.44001e-11" izz="2.07126e-05"/>
-      </inertial>
-      <!-- <inertial>
-        <pose>0.2 -0.13 0.068 0 0 0</pose>
-        <mass>0.001</mass>
-        <inertia>
-          <ixx>0.00001</ixx>
-          <ixy>0.000</ixy>
-          <ixz>0.000</ixz>
-          <iyy>0.00001</iyy>
-          <iyz>0.000</iyz>
-          <izz>0.00001</izz>
-        </inertia>
-      </inertial> -->
-       
-      <visual name='caster_front_right_visual'>
-        <!-- <pose>0.2 -0.13 0.068 0 0 0</pose> -->
-        <geometry>
-            <mesh filename="package://amr_demo/description/meshes/amr_caster_sup.stl" scale="0.001 0.001 0.001"/>
-        </geometry>
-        <material name="orange"/>
-      </visual>
-  </link>
-
-
-  <link name='caster_front_left_link'>
-      <inertial>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <mass value="0.1"/>
-        <inertia ixx="1.11756e-05" ixy="-4.23698e-11" ixz="-5.93817e-09" iyy="1.11924e-05" iyz="-1.44001e-11" izz="2.07126e-05"/>
-      </inertial>
-      <!-- <inertial>
-        <pose>0.2 0.13 0.068 0 0 0</pose>
-        <mass>0.001</mass>
-        <inertia>
-          <ixx>0.00001</ixx>
-          <ixy>0.000</ixy>
-          <ixz>0.000</ixz>
-          <iyy>0.00001</iyy>
-          <iyz>0.000</iyz>
-          <izz>0.00001</izz>
-        </inertia>
-      </inertial> -->
-       
-      <visual name='caster_front_left_visual'>
-        <!-- <pose>0.2 0.13 0.068 0 0 0</pose> -->
-        <geometry>
-            <mesh filename="package://amr_demo/description/meshes/amr_caster_sup.stl" scale="0.001 0.001 0.001"/>
-        </geometry>
-        <material name="orange"/>
-      </visual>
-  </link>
-
-  <link name="caster_wheel_back_right_link">
-    <inertial>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0.001"/>
-      <inertia ixx="1e-05" ixy="0" ixz="0" iyy="1e-05" iyz="0" izz="1e-05"/>
-    </inertial>
-    <visual name="caster_wheel_back_right_visual">
-      <!-- <origin xyz="-0.2225 -0.13 0.025" rpy="0 0 0"/> -->
-      <geometry>
-        <mesh filename="package://amr_demo/description/meshes/amr_caster.stl" scale="0.001 0.001 0.001"/>
-      </geometry>
-      <material name="black"/>
-    </visual>
-    <collision name="caster_wheel_back_right_collision">
-      <origin xyz="0 0 0" rpy="1.57 0 0"/>
-      <geometry>
-        <cylinder radius="0.025" length="0.026"/>
-      </geometry>
-
-    </collision>
-  </link>
-
-  <!-- Caster Wheel Back Left Link -->
-  <link name="caster_wheel_back_left_link">
-    <inertial>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0.001"/>
-      <inertia ixx="1e-05" ixy="0" ixz="0" iyy="1e-05" iyz="0" izz="1e-05"/>
-    </inertial>
-    <visual name="caster_wheel_back_left_visual">
-      <!-- <origin xyz="-0.2225 0.13 0.025" rpy="0 0 0"/> -->
-      <geometry>
-        <mesh filename="package://amr_demo/description/meshes/amr_caster.stl" scale="0.001 0.001 0.001"/>
-      </geometry>
-      <material name="black"/>
-    </visual>
-    <collision name="caster_wheel_back_left_collision">
-      <origin xyz="0 0 0" rpy="1.57 0 0"/>
-      <geometry>
-        <cylinder radius="0.025" length="0.026"/>
-      </geometry>
-
-    </collision>
-  </link>
-
-  <!-- Caster Wheel Front Right Link -->
-  <link name="caster_wheel_front_right_link">
-    <inertial>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0.001"/>
-      <inertia ixx="1e-05" ixy="0" ixz="0" iyy="1e-05" iyz="0" izz="1e-05"/>
-    </inertial>
-    <visual name="caster_wheel_front_right_visual">
-      <!-- <origin xyz="0.1775 -0.13 0.025" rpy="0 0 0"/> -->
-      <geometry>
-        <mesh filename="package://amr_demo/description/meshes/amr_caster.stl" scale="0.001 0.001 0.001"/>
-      </geometry>
-      <material name="black"/>
-    </visual>
-    <collision name="caster_wheel_front_right_collision">
-      <origin xyz="0 0 0" rpy="1.57 0 0"/>
-      <geometry>
-        <cylinder radius="0.025" length="0.026"/>
-      </geometry>
-
-    </collision>
-  </link>
-
-  <!-- Caster Wheel Front Left Link -->
-  <link name="caster_wheel_front_left_link">
-    <inertial>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0.001"/>
-      <inertia ixx="1e-05" ixy="0" ixz="0" iyy="1e-05" iyz="0" izz="1e-05"/>
-    </inertial>
-    <visual name="caster_wheel_front_left_visual">
-      <!-- <origin xyz="0.1775 0.13 0.025" rpy="0 0 0"/> -->
-      <geometry>
-        <mesh filename="package://amr_demo/description/meshes/amr_caster.stl" scale="0.001 0.001 0.001"/>
-      </geometry>
-      <material name="black"/>
-    </visual>
-    <collision name="caster_wheel_front_left_collision">
-      <origin xyz="0 0 0" rpy="1.57 0 0"/>
-      <geometry>
-        <cylinder radius="0.025" length="0.026"/>
-      </geometry>
-
-    </collision>
-  </link>
-
-
-   <!-- Joint definitions -->
+  <!-- Joint definitions -->
 
   <joint name="base_joint" type="fixed">
     <parent link="base_link"/>
@@ -394,94 +166,39 @@
   <joint name="wheel_left_joint" type="fixed">
     <parent link="chassis"/>
     <child link="wheel_left_link"/>
-    <origin xyz="0 0.145 0.085" rpy="-1.57 0 0"/>
-    <!-- <axis xyz="0 0 1"/> -->
-    <!-- <limit lower="-1e+16" upper="1e+16"/> -->
+    <!-- 좌우 0.16m, base_link 기준 z -0.065m -->
+    <origin xyz="0 0.16 -0.065" rpy="-1.57 0 0"/>
   </joint>
 
   <joint name="wheel_right_joint" type="fixed">
     <parent link="chassis"/>
     <child link="wheel_right_link"/>
-    <origin xyz="0 -0.145 0.085" rpy="1.57 0 0"/>
-    <!-- <axis xyz="0 0 -1"/> -->
-    <!-- <limit lower="-1e+16" upper="1e+16"/> -->
+    <!-- 우측이므로 y 음수, z -0.065m -->
+    <origin xyz="0 -0.16 -0.065" rpy="1.57 0 0"/>
   </joint>
 
-  <joint name="caster_back_right_joint" type="fixed">
-    <parent link="chassis"/>
-    <child link="caster_back_right_link"/>
-    <origin xyz="-0.2 -0.13 0.068" rpy="0 0 0"/>
-    <!-- <axis xyz="0 0 1"/> -->
-  </joint>
-
-  <joint name="caster_back_left_joint" type="fixed">
-    <parent link="chassis"/>
-    <child link="caster_back_left_link"/>
-    <origin xyz="-0.2 0.13 0.068" rpy="0 0 0"/>
-    <!-- <axis xyz="0 0 1"/> -->
-  </joint>
-
-  <joint name="caster_front_right_joint" type="fixed">
-    <parent link="chassis"/>
-    <child link="caster_front_right_link"/>
-    <origin xyz="0.2 -0.13 0.068" rpy="0 0 0"/>
-    <!-- <axis xyz="0 0 1"/> -->
-  </joint>
-
-  <joint name="caster_front_left_joint" type="fixed">
-    <parent link="chassis"/>
-    <child link="caster_front_left_link"/>
-    <origin xyz="0.2 0.13 0.068" rpy="0 0 0"/>
-    <!-- <axis xyz="0 0 1"/> -->
-  </joint>
-
-  <joint name="caster_wheel_back_right_joint" type="fixed">
-    <parent link="caster_back_right_link"/>
-    <child link="caster_wheel_back_right_link"/>
-    <origin xyz="-0.0225 0 -0.043" rpy="0 0 0"/>
-    <!-- <axis xyz="0 1 0"/> -->
-  </joint>
-
-  <joint name="caster_wheel_back_left_joint" type="fixed">
-    <parent link="caster_back_left_link"/>
-    <child link="caster_wheel_back_left_link"/>
-    <origin xyz="-0.0225 0 -0.043" rpy="0 0 0"/>
-    <!-- <axis xyz="0 1 0"/> -->
-  </joint>
-
-  <joint name="caster_wheel_front_right_joint" type="fixed">
-    <parent link="caster_front_right_link"/>
-    <child link="caster_wheel_front_right_link"/>
-    <origin xyz="-0.0225 -0 -0.043" rpy="0 0 0"/>
-    <!-- <axis xyz="0 1 0"/> -->
-  </joint>
-
-  <joint name="caster_wheel_front_left_joint" type="fixed">
-    <parent link="caster_front_left_link"/>
-    <child link="caster_wheel_front_left_link"/>
-    <origin xyz="-0.0225 0 -0.043" rpy="0 0 0"/>
-    <!-- <axis xyz="0 1 0"/> -->
-  </joint>
-
+  <!-- Central fused laser frame -->
   <joint name="lidar_joint" type="fixed">
     <parent link="chassis"/>
     <child link="laser"/>
-    <origin xyz="0.0 0.0 0.2" rpy="0 0 -1.57"/>
-    <!-- <axis xyz="0 1 0"/> -->
+    <!-- 로봇 센터 기준 -->
+    <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
   </joint>
 
+  <!-- Front LiDAR -->
   <joint name="lidar1_joint" type="fixed">
     <parent link="chassis"/>
     <child link="lidar1_link"/>
-    <origin xyz="0.24698 0.143555 0.2" rpy="0. 0 -1.57"/>
-    <!-- <axis xyz="0 1 0"/> -->
+    <!-- 앞으로 10.5cm, 오른쪽 7.5cm, 위로 25cm -->
+    <origin xyz="0.105 -0.075 0.25" rpy="0 0 0"/>
   </joint>
 
+  <!-- Rear LiDAR (180 deg yaw) -->
   <joint name="lidar2_joint" type="fixed">
     <parent link="chassis"/>
     <child link="lidar2_link"/>
-    <origin xyz="-0.24698 -0.143555 0.2" rpy="0. 0 1.57"/>
-    <!-- <axis xyz="0 1 0"/> -->
+    <!-- 뒤로 10.5cm, 왼쪽 7.5cm, 위로 25cm -->
+    <origin xyz="-0.105 0.075 0.25" rpy="0 0 3.14159"/>
   </joint>
 
 </robot>

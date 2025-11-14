@@ -75,8 +75,9 @@ class Nodelet(Node):
         self.msg_wheelmotor = WheelMotor()
 
         # odom param
-        self.wheel_separation = 0.298   # [m]
-        self.wheel_diameter = 0.17      # [m]
+        self.wheel_diameter = 0.13
+        # 만약 "좌우 16cm"가 각 휠까지 거리라면 → wheel_separation = 0.32
+        self.wheel_separation = 0.32
         self.pose_x = 0.0
         self.pose_y = 0.0
         self.pose_theta = 0.0
