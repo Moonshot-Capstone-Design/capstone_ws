@@ -8,14 +8,6 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 def generate_launch_description():
     ld = LaunchDescription()
 
-    node = Node(
-        package="serial_test",
-        executable="test_node",
-        name="test_node",
-        output="screen"
-    )
-    ld.add_action(node)
-
     node_joy = Node(
         package="joy",
         executable="joy_node",
@@ -26,9 +18,8 @@ def generate_launch_description():
 
 
     # Path to the URDF file
-    pkg_path = os.path.join(get_package_share_directory('amr_demo'))
-    pkg_path2 = os.path.join(get_package_share_directory('serial_test'))
-    urdf_file = os.path.join(pkg_path, 'description', 'amr_demo_center.urdf')
+    pkg_path = os.path.join(get_package_share_directory('robot_description'))
+    urdf_file = os.path.join(pkg_path, 'description', 'robot_description.urdf')
     with open(urdf_file, 'r') as infp:
         robot_description = infp.read()
     # Create a robot_state_publisher node
