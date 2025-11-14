@@ -1,18 +1,24 @@
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String
+from std_msgs.msg import String, Header, Bool
 from sensor_msgs.msg import Joy
 from amr_msgs.msg import WheelMotor
 from geometry_msgs.msg import Twist, TransformStamped
+from sensor_msgs.msg import LaserScan, PointCloud2
 from nav_msgs.msg import Odometry
 from tf2_ros import TransformBroadcaster, TransformListener, Buffer
 from tf_transformations import quaternion_from_euler, euler_from_quaternion
-from sensor_msgs.msg import JointState
+import time
+import json
+import numpy as np
 
 from rclpy.qos import qos_profile_sensor_data, QoSProfile, ReliabilityPolicy, DurabilityPolicy
+import struct
+import sensor_msgs_py.point_cloud2 as pc2
 
-import numpy as np
 from serial_comm.motor_driver import MotorDriver
+
+import serial  ###5/5 update (STM)
 
 
 class Nodelet(Node):
@@ -22,14 +28,20 @@ class Nodelet(Node):
         self.odom_pub = self.create_publisher(Odometry, 'odom', 10)
         self.sub_joy = self.create_subscription(Joy, '/joy', self.joy_callback, 100)
         self.sub_cmd_vel = self.create_subscription(Twist, '/cmd_vel', self.cmd_vel_callback, 100)
+        self.stm_pub = self.create_publisher(String, '/stm_command', 10)
 
         self.amr_data_distance = self.create_publisher(String, '/amr_data_distance', 10)
+        self.amr_data_lift = self.create_publisher(String, '/amr_data_lift', 10)
+
+        self.lift_pub = self.create_publisher(Bool, 'lift', 10)
+        self.is_lifted = Bool()
+        self.is_lifted.data = False
 
         self.dt = 0.02
         self.timer_ = self.create_timer(self.dt, self.timer_callback)
         self.tf_broadcaster = TransformBroadcaster(self)
 
-        # global coordinate (odom -> map)
+        ####6/19 global coordinate####
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
@@ -42,50 +54,55 @@ class Nodelet(Node):
         self.md = MotorDriver()
 
         # PID related variables
-        self.p_gain = 1.0
-        self.i_gain = 0.0
+        self.p_gain = 1.
+        self.i_gain = 0.
         self.d_gain = 0.01
         self.forget = 0.99
 
-        self.err1_prev, self.err1_i = 0.0, 0.0
-        self.err2_prev, self.err2_i = 0.0, 0.0
+        self.err1_prev, self.err1_i = 0., 0.
+        self.err2_prev, self.err2_i = 0., 0.
         self.torque1, self.torque2 = 0, 0
         self.velocity1, self.velocity2 = 0, 0
 
-        # target position (encoder)
+        # target position
         self.target_pos1, self.target_pos2 = 0, 0
 
         # joy gain
-        self.joy_fb = 0.0
-        self.joy_lr = 0.0
-        self.v_gain = 100.0
-        self.w_gain = 50.0
+        self.joy_fb = 0
+        self.joy_lr = 0
+        self.v_gain = 100
+        self.w_gain = 50
 
-        self.joy_r2 = 0.0
-        self.joy_l2 = 0.0
+        self.joy_r2 = 0
+        self.joy_l2 = 0
         self.change_mode = 0
         self.joy_stop = 0
+        self.joy_lift_down_old = 0
+        self.joy_lift_up_old = 0
 
         self.joy_speed_up = 0
         self.joy_speed_down = 0
-        self.joy_speed_up_old = 0
-        self.joy_speed_down_old = 0
         self.gain_count = 2
         self.gain_list = [0.5, 0.7, 1.0, 1.3, 1.5, 1.7, 2.0, 2.3, 2.5, 4.0]
 
+        # >>> 수정: 버튼 edge 검출용 이전 값 초기화
+        self.joy_speed_up_old = 0
+        self.joy_speed_down_old = 0
+        # <<< 수정 끝
+
         self.msg_wheelmotor = WheelMotor()
 
-        # odom param
-        self.wheel_diameter = 0.13
-        # 만약 "좌우 16cm"가 각 휠까지 거리라면 → wheel_separation = 0.32
-        self.wheel_separation = 0.32
+        #odom param
+        self.wheel_separation = 0.32  # Adjust as necessary
+        self.wheel_diameter = 0.13    # Adjust as necessary
         self.pose_x = 0.0
         self.pose_y = 0.0
         self.pose_theta = 0.0
         self.last_time = self.get_clock().now()
 
-        # accumulated distance
+        # accumulated_distance
         self.accumulated_distance = 0.0
+        self.count_lift = 0
 
         # Encoder positions
         self.last_pos1 = 0.0
@@ -94,12 +111,6 @@ class Nodelet(Node):
         self.cur_pos2 = 0.0
         self.del_pos1 = 0.0
         self.del_pos2 = 0.0
-
-        # joint state publisher (for wheel TF in RViz)
-        self.joint_pub = self.create_publisher(JointState, '/joint_states', 10)
-        self.wheel_left_angle  = 0.0  # rad
-        self.wheel_right_angle = 0.0  # rad
-
 
         # cmd_vel param
         self.cmd_vel_r = 0.0
@@ -120,11 +131,25 @@ class Nodelet(Node):
         self.w_motor_last = 0.0
         self.alpha = 0.5
 
+        self.target_marker_id = 3
+
+        # aruco marker flag
+        self.marker_detected = False
+        self.marker_detected_count = 0
+        self.marker_deadreckonmode = False
+        self.marker_target_distance = 0.9
+        self.marker_target_distance2 = 0.9
+        self.marker_target_encoder = self.marker_target_distance / (np.pi * self.wheel_diameter / self.md.encoder_gain)
+        self.marker_moving_distance = 0
+        self.marker_moving_distance2 = 0
+        self.next_marker_id = 7  # Update target marker ID to the next marker
+        self.marker_rotation_en_count = 0.
+        self.marker7_1 = True
+
     def timer_callback(self):
         self.loopcnt += 1
 
         if self.firstloop:
-            # 초기 상태 읽기
             self.md.send_vel_cmd(self.velocity1, self.velocity2)
             self.md.recv_motor_state()
             self.target_pos1 = self.md.pos1
@@ -136,11 +161,11 @@ class Nodelet(Node):
             self.firstloop = False
             return
 
-        # 1) 제어 명령 전송
         if self.JOY_CONTROL:
-            # Joystick → 속도 제어
-            self.vel_input1 = self.v_gain * self.joy_fb - self.w_gain * self.joy_lr
-            self.vel_input2 = self.v_gain * self.joy_fb + self.w_gain * self.joy_lr
+            self.vel_input1 = self.v_gain * self.joy_fb
+            self.vel_input1 -= self.w_gain * self.joy_lr
+            self.vel_input2 = self.v_gain * self.joy_fb
+            self.vel_input2 += self.w_gain * self.joy_lr
 
             self.vel_input1 = self.Lowpass_filter(self.vel_input1, self.vel_input1_old, 0.1)
             self.vel_input2 = self.Lowpass_filter(self.vel_input2, self.vel_input2_old, 0.1)
@@ -149,29 +174,68 @@ class Nodelet(Node):
             self.vel_input2_old = self.vel_input2
 
             if self.joy_stop == 1:
-                # 현재 위치로 position hold
                 self.md.send_position_cmd(self.md.pos1, self.md.pos2, int(60), int(60))
                 self.get_logger().info('stop')
             else:
-                # 속도 제어 명령
                 self.md.send_vel_cmd(self.vel_input1, self.vel_input2)
 
             self.msg_wheelmotor.target1 = int(self.vel_input1)
             self.msg_wheelmotor.target2 = int(self.vel_input2)
 
         else:
-            # AUTO 모드: cmd_vel → 엔코더 target_pos 적분
-            self.md.send_position_cmd(
-                int(self.target_pos1),
-                int(self.target_pos2),
-                int(60 * self.gear_ratio),
-                int(60 * self.gear_ratio)
-            )
+            if self.marker_detected and not self.marker_deadreckonmode:
+                self.marker_detected_count += 1
+                self.get_logger().info(f'count: {self.marker_detected_count}')
+            if self.marker_detected_count > 20:
+                self.marker_deadreckonmode = True
+                self.marker_moving_distance = 0
+                self.marker_detected_count = 0
+
+            if self.marker_deadreckonmode and self.target_marker_id == 3:
+                vel_meter = self.marker_target_distance / 4.
+                vel_enc = vel_meter / (np.pi * self.wheel_diameter / self.md.encoder_gain)
+                if self.marker_moving_distance < self.marker_target_distance:
+                    self.target_pos1 += vel_enc * self.dt
+                    self.target_pos2 += vel_enc * self.dt
+                    self.marker_moving_distance += vel_meter * self.dt
+                else:
+                    self.marker_deadreckonmode = False
+                    self.target_marker_id = self.next_marker_id
+                    self.marker_moving_distance = 0.
+            if self.marker_deadreckonmode and self.target_marker_id == 7:
+                wheel_separation = 0.298
+                wheel_diameter = 0.17
+                encoder_pulses_per_wheel = 240
+                vel_meter = self.marker_target_distance2 / 4.
+                vel_enc = vel_meter / (np.pi * self.wheel_diameter / self.md.encoder_gain)
+                R = wheel_separation / 2
+                distance_per_wheel = (np.pi * R) / 2
+                wheel_circumference = np.pi * wheel_diameter
+                rotation_encoder_count = (distance_per_wheel / wheel_circumference) * encoder_pulses_per_wheel
+
+                if self.marker_rotation_en_count < rotation_encoder_count and self.marker7_1 is True:
+                    self.target_pos1 += rotation_encoder_count / 100
+                    self.target_pos2 -= rotation_encoder_count / 100
+                    self.marker_rotation_en_count += rotation_encoder_count / 100
+                elif self.marker_moving_distance2 < self.marker_target_distance2 and self.marker7_1 is False:
+                    self.target_pos1 += vel_enc * self.dt
+                    self.target_pos2 += vel_enc * self.dt
+                    self.marker_moving_distance2 += vel_meter * self.dt
+                else:
+                    if (self.marker_rotation_en_count > rotation_encoder_count) and (self.marker_moving_distance2 > self.marker_target_distance2):
+                        self.marker_deadreckonmode = False
+                        self.marker_moving_distance2 = 0.
+                        self.marker_rotation_en_count = 0.
+                        self.target_marker_id = 3
+                    self.marker7_1 is False
+
+            self.marker_detected = False
+
+            self.md.send_position_cmd(int(self.target_pos1), int(self.target_pos2), int(60 * 4.33), int(60 * 4.33))
 
             self.msg_wheelmotor.target1 = int(self.target_pos1)
             self.msg_wheelmotor.target2 = int(self.target_pos2)
 
-        # 2) 모터 상태 수신
         self.md.recv_motor_state()
 
         self.msg_wheelmotor.position1 = self.md.pos1
@@ -180,61 +244,64 @@ class Nodelet(Node):
         self.msg_wheelmotor.velocity2 = self.md.rpm2
         self.msg_wheelmotor.current1 = int(self.md.current1)
         self.msg_wheelmotor.current2 = int(self.md.current2)
-        self.msg_wheelmotor.v_x = (self.md.rpm1 + self.md.rpm2) * np.pi * self.wheel_diameter / (60 * 2 * self.gear_ratio)
-        self.msg_wheelmotor.w_z = (self.md.rpm2 - self.md.rpm1) * np.pi * self.wheel_diameter / (60 * self.wheel_separation * self.gear_ratio)
+
+        # >>> 수정: 왼쪽/오른쪽 바퀴 속도 부호 정리 (왼쪽 부호 반전)
+        rpm_left = -self.md.rpm1    # left wheel
+        rpm_right = self.md.rpm2    # right wheel
+
+        self.msg_wheelmotor.v_x = (rpm_left + rpm_right) * np.pi * self.wheel_diameter / (60 * 2 * 4.33)
+        self.msg_wheelmotor.w_z = -(rpm_right - rpm_left) * np.pi * self.wheel_diameter / (60 * self.wheel_separation * 4.33)
+        # <<< 수정 끝
 
         self.pub.publish(self.msg_wheelmotor)
 
-        # 3) Odom 계산
+        #############################odom 5/30################################
+
         self.cur_pos1 = self.md.pos1 - self.del_pos1
         self.cur_pos2 = self.md.pos2 - self.del_pos2
 
+        # Calculate change in encoder values
         delta_pos1 = self.cur_pos1 - self.last_pos1
         delta_pos2 = self.cur_pos2 - self.last_pos2
 
+        # Update last encoder positions
         self.last_pos1 = self.cur_pos1
         self.last_pos2 = self.cur_pos2
 
-        left_wheel_disp = (delta_pos1 / self.md.encoder_gain) * (np.pi * self.wheel_diameter)
-        right_wheel_disp = (delta_pos2 / self.md.encoder_gain) * (np.pi * self.wheel_diameter)
+        # >>> 수정: 오돔용 엔코더 부호 보정 (왼쪽만 반전)
+        delta_left_enc = -delta_pos1      # left wheel encoder (sign flipped)
+        delta_right_enc = delta_pos2      # right wheel encoder as is
 
+        left_wheel_disp = (delta_left_enc / self.md.encoder_gain) * (np.pi * self.wheel_diameter)
+        right_wheel_disp = (delta_right_enc / self.md.encoder_gain) * (np.pi * self.wheel_diameter)
+        # <<< 수정 끝
+
+        # Calculate time difference
         current_time = self.get_clock().now()
         dt = (current_time - self.last_time).nanoseconds / 1e9
         self.last_time = current_time
 
-        # 3-1) 바퀴 회전각(rad) 업데이트 (distance / radius)
-        radius = self.wheel_diameter / 2.0
-        if radius > 0.0:
-            self.wheel_left_angle  += left_wheel_disp  / radius
-            self.wheel_right_angle += right_wheel_disp / radius
-
-        # 3-2) JointState publish → robot_state_publisher가 wheel TF 갱신
-        js = JointState()
-        js.header.stamp = current_time.to_msg()
-        js.name = ['wheel_left_joint', 'wheel_right_joint']
-        js.position = [self.wheel_left_angle, self.wheel_right_angle]
-        # velocity, effort는 필요 없으면 생략 가능
-        self.joint_pub.publish(js)
-
+        # Calculate linear and angular velocities
         linear_velocity = (left_wheel_disp + right_wheel_disp) / (2.0 * dt)
-        angular_velocity = (right_wheel_disp - left_wheel_disp) / (self.wheel_separation * dt)
+        angular_velocity = -(right_wheel_disp - left_wheel_disp) / (self.wheel_separation * dt)
 
+        # Update pose
         self.pose_x += linear_velocity * np.cos(self.pose_theta) * dt
         self.pose_y += linear_velocity * np.sin(self.pose_theta) * dt
         self.pose_theta += angular_velocity * dt
-
         if self.pose_theta > np.pi:
-            self.pose_theta -= 2 * np.pi
+            self.pose_theta = self.pose_theta - (2 * np.pi)
         if self.pose_theta < -np.pi:
-            self.pose_theta += 2 * np.pi
+            self.pose_theta = self.pose_theta + (2 * np.pi)
 
+        # Update accumulated_distance
         self.accumulated_distance += np.fabs(linear_velocity) * dt
         amr_data_distance_ = String()
         amr_msg_string = f"{self.accumulated_distance:.3f} (m)"
         amr_data_distance_.data = amr_msg_string
         self.amr_data_distance.publish(amr_data_distance_)
 
-        # 4) Odom 메시지 publish
+        # Publish odometry message
         odom_msg = Odometry()
         odom_msg.header.stamp = current_time.to_msg()
         odom_msg.header.frame_id = 'odom'
@@ -252,14 +319,14 @@ class Nodelet(Node):
 
         self.odom_pub.publish(odom_msg)
 
-        # 5) TF(odom -> base_link) broadcast
+        # Publish transform over TF
         transform = TransformStamped()
         transform.header.stamp = current_time.to_msg()
         transform.header.frame_id = 'odom'
         transform.child_frame_id = 'base_link'
         transform.transform.translation.x = self.pose_x
         transform.transform.translation.y = self.pose_y
-        transform.transform.translation.z = 0.0
+        transform.transform.translation.z = 0.
         transform.transform.rotation.x = q[0]
         transform.transform.rotation.y = q[1]
         transform.transform.rotation.z = q[2]
@@ -275,18 +342,18 @@ class Nodelet(Node):
 
         transformation_matrix = np.array([
             [np.cos(yaw), -np.sin(yaw), tx],
-            [np.sin(yaw),  np.cos(yaw), ty],
-            [0,           0,           1]
+            [np.sin(yaw), np.cos(yaw), ty],
+            [0, 0, 1]
         ])
 
-        pose_odom = np.array([x, y, 1.0])
+        pose_odom = np.array([x, y, 1])
         pose_map = np.dot(transformation_matrix, pose_odom)
 
         theta_map = theta + yaw
         if theta_map > np.pi:
-            theta_map -= 2 * np.pi
+            theta_map = theta_map - (2 * np.pi)
         if theta_map < -np.pi:
-            theta_map += 2 * np.pi
+            theta_map = theta_map + (2 * np.pi)
 
         return pose_map[0], pose_map[1], theta_map
 
@@ -336,32 +403,54 @@ class Nodelet(Node):
             self.velocity2 = -1022
         self.velocity2 = np.array(self.velocity2, dtype=np.int16)
 
+    def send_data(self, data):
+        self.get_logger().info(f'send data check: {data}')
+        self.serial_port.write(data.encode())
+
     def joy_callback(self, msg):
-        self.joy_fb = msg.axes[1]
-        self.joy_lr = msg.axes[2]
+        buttons = msg.buttons
+        axes = msg.axes
 
-        self.joy_r2 = msg.axes[4]
-        self.joy_l2 = msg.axes[5]
-        self.joy_stop = msg.buttons[0]
+        def B(i):
+            return buttons[i] if i < len(buttons) else 0
 
-        self.joy_speed_up = msg.buttons[11]
-        self.joy_speed_down = msg.buttons[15]
+        def A(i):
+            return axes[i] if i < len(axes) else 0.0
 
-        if self.gain_count < len(self.gain_list) - 1 and self.joy_speed_up == 1 and self.joy_speed_up_old == 0:
-            self.gain_count += 1
-            self.get_logger().info(f'speed_up : {self.gain_list[self.gain_count]}')
+        self.joy_lr = -A(2)
+        self.joy_fb = -A(1)
 
-        if self.gain_count > 0 and self.joy_speed_down == 1 and self.joy_speed_down_old == 0:
-            self.gain_count -= 1
-            self.get_logger().info(f'speed_up : {self.gain_list[self.gain_count]}')
+        self.joy_r2 = A(4)
+        self.joy_l2 = A(5)
+
+        self.joy_stop = B(0)
+
+        self.joy_speed_up = B(11)
+        self.joy_speed_down = B(10)
+
+        if (self.joy_speed_up == 1) and (self.joy_speed_up_old == 0):
+            if self.gain_count < len(self.gain_list) - 1:
+                self.gain_count += 1
+                self.get_logger().info(f"[GAIN+] => {self.gain_list[self.gain_count]}")
+
+        if (self.joy_speed_down == 1) and (self.joy_speed_down_old == 0):
+            if self.gain_count > 0:
+                self.gain_count -= 1
+                self.get_logger().info(f"[GAIN-] => {self.gain_list[self.gain_count]}")
 
         self.joy_speed_up_old = self.joy_speed_up
         self.joy_speed_down_old = self.joy_speed_down
-        self.joy_fb = self.joy_fb * self.gain_list[self.gain_count]
 
-        EPSILON = 1e-5
+        gain = self.gain_list[self.gain_count]
+        self.joy_fb *= gain
+        self.joy_lr *= gain
 
-        if abs(self.joy_r2 + 1.0) < EPSILON and abs(self.joy_l2 + 1.0) < EPSILON and self.change_mode == 1:
+        EPS = 1e-5
+
+        if abs(self.joy_r2 - 1.0) < EPS and abs(self.joy_l2 - 1.0) < EPS:
+            self.change_mode = 1
+
+        if abs(self.joy_r2 + 1.0) < EPS and abs(self.joy_l2 + 1.0) < EPS and self.change_mode == 1:
             self.change_mode = 0
             self.target_pos1 = self.md.pos1
             self.target_pos2 = self.md.pos2
@@ -369,14 +458,36 @@ class Nodelet(Node):
             self.vel_input2 = 0.0
 
             self.JOY_CONTROL = not self.JOY_CONTROL
-            self.get_logger().info(
-                '!!!!!!!!!!!Joystick_control!!!!!!!!!!!!' if self.JOY_CONTROL else '!!!!!!!!!!!!AUTO!!!!!!!!!!!!'
-            )
-        elif abs(self.joy_r2 - 1.0) < EPSILON and abs(self.joy_l2 - 1.0) < EPSILON:
-            self.change_mode = 1
+            if self.JOY_CONTROL:
+                self.get_logger().info("=== Joystick Control Mode ===")
+            else:
+                self.get_logger().info("=== Auto Control Mode ===")
 
     def Lowpass_filter(self, vel_input, vel_input_1, alpha):
         return alpha * vel_input + (1 - alpha) * vel_input_1
+
+    def marker_callback(self, msg):
+        if not self.JOY_CONTROL:
+            if self.target_marker_id in msg.marker_ids:
+                self.marker_detected = True
+                index = msg.marker_ids.index(self.target_marker_id)
+                pose = msg.poses[index]
+
+                self.marker_x = pose.position.x
+                self.marker_y = pose.position.y
+                z = pose.position.z
+
+                qx = pose.orientation.x
+                qy = pose.orientation.y
+                qz = pose.orientation.z
+                qw = pose.orientation.w
+
+                roll, pitch, yaw = euler_from_quaternion([qx, qy, qz, qw])
+                yaw = yaw * 180 / np.pi
+                self.get_logger().info(f'yaw: {yaw}')
+                self.get_logger().info(f'self.pose_theta: {self.pose_theta}')
+            else:
+                self.get_logger().info(f'Target marker ID {self.target_marker_id} not found.')
 
 
 def main(args=None):
