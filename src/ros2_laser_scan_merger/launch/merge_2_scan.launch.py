@@ -17,7 +17,7 @@ def generate_launch_description():
         'params.yaml'
     )
     return LaunchDescription([
-        
+
         launch_ros.actions.Node(
             package='ros2_laser_scan_merger',
             executable='ros2_laser_scan_merger',
@@ -45,5 +45,5 @@ def generate_launch_description():
             executable='pointcloud_to_laserscan_node',
             parameters=[config]
         )
-        
+
     ])

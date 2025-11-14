@@ -2,8 +2,8 @@
   ros__parameters:
     flip1: false
     flip2: false
-    inverse1: true
-    inverse2: true
+    inverse1: false
+    inverse2: false
     laser1Alpha: 0.0
     laser1AngleMax: 181.0
     laser1AngleMin: -181.0
