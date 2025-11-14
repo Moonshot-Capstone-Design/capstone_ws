@@ -28,8 +28,8 @@
     # qos_overrides./parameter_events.publisher.durability: volatile
     # qos_overrides./parameter_events.publisher.history: keep_last
     qos_overrides./parameter_events.publisher.reliability: best_effort
-    scanTopic1: /rplidar1/scan_filtered
-    scanTopic2: /rplidar2/scan_filtered
+    scanTopic1: /rplidar1/scan
+    scanTopic2: /rplidar2/scan
     show1: true
     show2: true
     use_sim_time: false
