@@ -11,75 +11,122 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    channel_type =  LaunchConfiguration('channel_type', default='serial')
-    serial_port = LaunchConfiguration('serial_port', default='/dev/ttyUSB0')
-    serial_baudrate = LaunchConfiguration('serial_baudrate', default='460800')
-    frame_id = LaunchConfiguration('frame_id', default='laser')
-    inverted = LaunchConfiguration('inverted', default='false')
-    angle_compensate = LaunchConfiguration('angle_compensate', default='true')
-    scan_mode = LaunchConfiguration('scan_mode', default='Standard')
+    channel_type1 = LaunchConfiguration('channel_type1', default='serial')
+    serial_port1 = LaunchConfiguration('serial_port1', default='/dev/ttyUSB_LIDAR1_FRONT')
+    serial_baudrate1 = LaunchConfiguration('serial_baudrate1', default='460800') # for c1 is 460800
+    frame_id1 = LaunchConfiguration('frame_id1', default='lidar1_link')
+    inverted1 = LaunchConfiguration('inverted1', default='false')
+    angle_compensate1 = LaunchConfiguration('angle_compensate1', default='true')
+    scan_mode1 = LaunchConfiguration('scan_mode1', default='DenseBoost')
 
-    rviz_config_dir = os.path.join(
-            get_package_share_directory('sllidar_ros2'),
-            'rviz',
-            'sllidar_ros2.rviz')
 
+    channel_type2 = LaunchConfiguration('channel_type2', default='serial')
+    serial_port2 = LaunchConfiguration('serial_port2', default='/dev/ttyUSB_LIDAR2_REAR')
+    serial_baudrate2 = LaunchConfiguration('serial_baudrate2', default='460800') # for c1 is 460800
+    frame_id2 = LaunchConfiguration('frame_id2', default='lidar2_link')
+    inverted2 = LaunchConfiguration('inverted2', default='false')
+    angle_compensate2 = LaunchConfiguration('angle_compensate2', default='true')
+    scan_mode2 = LaunchConfiguration('scan_mode2', default='DenseBoost')
 
     return LaunchDescription([
         DeclareLaunchArgument(
-            'channel_type',
-            default_value=channel_type,
-            description='Specifying channel type of lidar'),
+            'channel_type1',
+            default_value=channel_type1,
+            description='Specifying channel type of lidar1'),
 
         DeclareLaunchArgument(
-            'serial_port',
-            default_value=serial_port,
-            description='Specifying usb port to connected lidar'),
+            'serial_port1',
+            default_value=serial_port1,
+            description='Specifying usb port to connected lidar1'),
 
         DeclareLaunchArgument(
-            'serial_baudrate',
-            default_value=serial_baudrate,
-            description='Specifying usb port baudrate to connected lidar'),
-        
-        DeclareLaunchArgument(
-            'frame_id',
-            default_value=frame_id,
-            description='Specifying frame_id of lidar'),
+            'serial_baudrate1',
+            default_value=serial_baudrate1,
+            description='Specifying usb port baudrate to connected lidar1'),
 
         DeclareLaunchArgument(
-            'inverted',
-            default_value=inverted,
-            description='Specifying whether or not to invert scan data'),
+            'frame_id1',
+            default_value=frame_id1,
+            description='Specifying frame_id of lidar1'),
 
         DeclareLaunchArgument(
-            'angle_compensate',
-            default_value=angle_compensate,
-            description='Specifying whether or not to enable angle_compensate of scan data'),
+            'inverted1',
+            default_value=inverted1,
+            description='Specifying whether or not to invert scan data1'),
 
         DeclareLaunchArgument(
-            'scan_mode',
-            default_value=scan_mode,
-            description='Specifying scan mode of lidar'),
+            'angle_compensate1',
+            default_value=angle_compensate1,
+            description='Specifying whether or not to enable angle_compensate of scan data1'),
+
+        DeclareLaunchArgument(
+            'scan_mode1',
+            default_value=scan_mode1,
+            description='Specifying scan mode of lidar1'),
 
         Node(
             package='sllidar_ros2',
             executable='sllidar_node',
-            name='sllidar_node',
-            parameters=[{'channel_type':channel_type,
-                         'serial_port': serial_port, 
-                         'serial_baudrate': serial_baudrate, 
-                         'frame_id': frame_id,
-                         'inverted': inverted, 
-                         'angle_compensate': angle_compensate,
-                           'scan_mode': scan_mode
-                         }],
+            name='sllidar_node1',
+            namespace='rplidar1',
+            parameters=[{'channel_type': channel_type1,
+                         'serial_port': serial_port1, 
+                         'serial_baudrate': serial_baudrate1, 
+                         'frame_id': frame_id1,
+                         'inverted': inverted1, 
+                         'angle_compensate': angle_compensate1, 
+                         'scan_mode': scan_mode1,
+                              }],
             output='screen'),
 
+
+        DeclareLaunchArgument(
+            'channel_type2',
+            default_value=channel_type2,
+            description='Specifying channel type of lidar2'),
+
+        DeclareLaunchArgument(
+            'serial_port2',
+            default_value=serial_port2,
+            description='Specifying usb port to connected lidar2'),
+
+        DeclareLaunchArgument(
+            'serial_baudrate2',
+            default_value=serial_baudrate2,
+            description='Specifying usb port baudrate to connected lidar2'),
+
+        DeclareLaunchArgument(
+            'frame_id2',
+            default_value=frame_id2,
+            description='Specifying frame_id of lidar2'),
+
+        DeclareLaunchArgument(
+            'inverted2',
+            default_value=inverted2,
+            description='Specifying whether or not to invert scan data2'),
+
+        DeclareLaunchArgument(
+            'angle_compensate2',
+            default_value=angle_compensate2,
+            description='Specifying whether or not to enable angle_compensate of scan data2'),
+
+        DeclareLaunchArgument(
+            'scan_mode2',
+            default_value=scan_mode2,
+            description='Specifying scan mode of lidar2'),
+
         Node(
-            package='rviz2',
-            executable='rviz2',
-            name='rviz2',
-            arguments=['-d', rviz_config_dir],
+            package='sllidar_ros2',
+            executable='sllidar_node',
+            name='sllidar_node2',
+            namespace='rplidar2',
+            parameters=[{'channel_type': channel_type2,
+                         'serial_port': serial_port2, 
+                         'serial_baudrate': serial_baudrate2, 
+                         'frame_id': frame_id2,
+                         'inverted': inverted2, 
+                         'angle_compensate': angle_compensate2, 
+                         'scan_mode': scan_mode2}],
             output='screen'),
     ])
 
