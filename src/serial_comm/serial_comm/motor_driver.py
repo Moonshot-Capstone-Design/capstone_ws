@@ -68,8 +68,22 @@ class MotorDriver:
         self.TMID = 184   # 모터드라이버(Slave)
         self.driverID = 1
 
-        # 엔코더 해상도 (원래 코드 그대로 유지)
+        # 엔코더 해상도
         self.encoder_gain = 250
+
+        # ===== 여기부터 추가: 상태 변수 기본값 =====
+        # 위치(pulse)
+        self.pos1 = 0
+        self.pos2 = 0
+
+        # 속도(rpm)
+        self.rpm1 = 0
+        self.rpm2 = 0
+
+        # 전류
+        self.current1 = 0.0
+        self.current2 = 0.0
+        # =======================================
 
     # ----------------- 내부 공통 유틸 ----------------- #
     def _build_frame(self, pid: int, payload: np.ndarray) -> np.ndarray:
