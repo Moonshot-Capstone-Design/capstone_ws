@@ -28,7 +28,7 @@ setup(
     entry_points={
         'console_scripts': [
             'base_main_node = serial_comm.base_main:main',
-            'md_teleop_node = serial_comm.md_teleop:main',
+            'test_md_teleop_node = serial_comm.test_md_teleop:main',
         ],
     },
 )

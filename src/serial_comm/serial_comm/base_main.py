@@ -417,8 +417,8 @@ class Nodelet(Node):
         def A(i):
             return axes[i] if i < len(axes) else 0.0
 
-        self.joy_lr = -A(2)
         self.joy_fb = -A(1)
+        self.joy_lr = -A(2)
 
         self.joy_r2 = A(4)
         self.joy_l2 = A(5)
@@ -443,7 +443,7 @@ class Nodelet(Node):
 
         gain = self.gain_list[self.gain_count]
         self.joy_fb *= gain
-        self.joy_lr *= gain
+        self.joy_lr *= gain * 0.5
 
         EPS = 1e-5
 
