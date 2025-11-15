@@ -77,8 +77,8 @@
   <!-- 기존 이름 유지: wheel_left_link / wheel_right_link -->
   <link name="wheel_left_link">
     <visual name="wheel_left_visual">
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <!-- 지름 130mm → radius=0.065, 두께 0.065 -->
+      <!-- cylinder의 z축을 y축으로 눕히기 위해 x축으로 -90도 회전 -->
+      <origin xyz="0 0 0" rpy="-1.5708 0 0"/>
       <geometry>
         <cylinder radius="0.065" length="0.065"/>
       </geometry>
@@ -88,7 +88,7 @@
 
   <link name="wheel_right_link">
     <visual name="wheel_right_visual">
-      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <origin xyz="0 0 0" rpy="-1.5708 0 0"/>
       <geometry>
         <cylinder radius="0.065" length="0.065"/>
       </geometry>
@@ -139,10 +139,9 @@
   <joint name="wheel_left_joint" type="continuous">
     <parent link="chassis"/>
     <child  link="wheel_left_link"/>
-    <!-- 지면 기준 휠 중심 높이 0.065m
-         chassis 중심 0.2075m → z = 0.065 - 0.2075 = -0.1425 -->
-    <!-- y=+0.16 (왼쪽), rpy=-1.57 로 축을 y축 방향 회전으로 맞춤 -->
-    <origin xyz="0.14 0.16 -0.1425" rpy="-1.57 0 0"/>
+    <!-- 위치만 지정, 회전(rpy)은 0으로 둠 -->
+    <origin xyz="0.14 0.16 -0.1425" rpy="0 0 0"/>
+    <!-- 회전축: y축 -->
     <axis xyz="0 1 0"/>
   </joint>
 
@@ -151,9 +150,7 @@
   <joint name="wheel_right_joint" type="continuous">
     <parent link="chassis"/>
     <child  link="wheel_right_link"/>
-    <!-- y=-0.16 (오른쪽), z 동일 -->
-    <origin xyz="0.14 -0.16 -0.1425" rpy="1.57 0 0"/>
+    <origin xyz="0.14 -0.16 -0.1425" rpy="0 0 0"/>
     <axis xyz="0 1 0"/>
   </joint>
-
 </robot>
