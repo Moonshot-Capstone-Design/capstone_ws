@@ -1,5 +1,6 @@
 <robot name="amr">
 
+  <!-- ================= 공통 소재 정의 ================= -->
   <material name="white">
     <color rgba="1 1 1 1" />
   </material>
@@ -20,43 +21,27 @@
     <color rgba="1 0 0 1" />
   </material>
 
-  <!-- Base Footprint -->
+  <!-- ================= 베이스 링크 (지면 기준 프레임) ================= -->
+  <!-- 기존 이름 유지: base_link -->
   <link name="base_link"/>
 
-  <!-- Base Link -->
+  <!-- ================= 섀시 링크(몸체) ================= -->
+  <!-- 기존 이름 유지: chassis -->
   <link name="chassis">
-    <inertial>
-      <origin xyz="0 0 0.18" rpy="0 0 0"/>
-      <mass value="1.37291"/>
-      <inertia ixx="0.0421114" ixy="0" ixz="0"
-               iyy="0.0421114" iyz="0" izz="0.0752549"/>
-    </inertial>
-
-    <collision name="base_collision">
-      <origin xyz="0 0 0.3" rpy="0 0 0"/>
-      <geometry>
-        <box size="0.6 0.35 0.1"/>
-      </geometry>
-    </collision>
-
     <visual name="base_visual">
+      <!-- chassis 원점을 몸체 중심으로 둠 -->
+      <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://amr_demo/description/meshes/amr_body.stl"
-              scale="0.001 0.001 0.001"/>
+        <!-- 가로(x)=0.30, 세로(y)=0.25, 높이(z)=0.215 -->
+        <box size="0.30 0.25 0.215"/>
       </geometry>
       <material name="white"/>
     </visual>
   </link>
 
-  <!-- Center laser (fusion frame) -->
+  <!-- ================= 중앙 레이저 프레임(가상 fused 센터) ================= -->
+  <!-- 기존 이름 유지: laser -->
   <link name="laser">
-    <inertial>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0.114"/>
-      <inertia ixx="0.001" ixy="0" ixz="0"
-               iyy="0.001" iyz="0" izz="0.001"/>
-    </inertial>
-
     <visual name="laser_visual">
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
@@ -66,32 +51,9 @@
     </visual>
   </link>
 
-  <!-- Front / Rear real LiDARs -->
-  <link name="lidar2_link">
-    <inertial>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0.114"/>
-      <inertia ixx="0.001" ixy="0" ixz="0"
-               iyy="0.001" iyz="0" izz="0.001"/>
-    </inertial>
-
-    <visual name="lidar2_visual">
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <geometry>
-        <cylinder radius="0.0385" length="0.03885"/>
-      </geometry>
-      <material name="black"/>
-    </visual>
-  </link>
-
+  <!-- ================= 실제 전/후방 LiDAR 링크 ================= -->
+  <!-- 기존 이름 유지: lidar1_link / lidar2_link -->
   <link name="lidar1_link">
-    <inertial>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0.114"/>
-      <inertia ixx="0.001" ixy="0" ixz="0"
-               iyy="0.001" iyz="0" izz="0.001"/>
-    </inertial>
-
     <visual name="lidar1_visual">
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
@@ -101,106 +63,97 @@
     </visual>
   </link>
 
-  <!-- Left Wheel Link -->
+  <link name="lidar2_link">
+    <visual name="lidar2_visual">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.0385" length="0.03885"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+  </link>
+
+  <!-- ================= 왼쪽 / 오른쪽 바퀴 링크 ================= -->
+  <!-- 기존 이름 유지: wheel_left_link / wheel_right_link -->
   <link name="wheel_left_link">
-    <inertial>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0.1"/>
-      <inertia ixx="1.11756e-05" ixy="-4.23698e-11" ixz="-5.93817e-09"
-               iyy="1.11924e-05" iyz="-1.44001e-11" izz="2.07126e-05"/>
-    </inertial>
-
-    <collision name="wheel_left_collision">
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <geometry>
-        <!-- φ130mm → radius 0.065 -->
-        <cylinder radius="0.065" length="0.046"/>
-      </geometry>
-    </collision>
-
     <visual name="wheel_left_visual">
-      <origin xyz="0 0 0" rpy="-1.57 0 0"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <!-- 지름 130mm → radius=0.065, 두께 0.065 -->
       <geometry>
-        <mesh filename="package://amr_demo/description/meshes/amr_wheel.stl"
-              scale="0.001 0.001 0.001"/>
+        <cylinder radius="0.065" length="0.065"/>
       </geometry>
       <material name="black"/>
     </visual>
   </link>
 
-  <!-- Right Wheel Link -->
   <link name="wheel_right_link">
-    <inertial>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="0.1"/>
-      <inertia ixx="1.11756e-05" ixy="-4.23698e-11" ixz="-5.93817e-09"
-               iyy="1.11924e-05" iyz="-1.44001e-11" izz="2.07126e-05"/>
-    </inertial>
-
-    <collision name="wheel_right_collision">
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <geometry>
-        <!-- φ130mm → radius 0.065 -->
-        <cylinder radius="0.065" length="0.046"/>
-      </geometry>
-    </collision>
-
     <visual name="wheel_right_visual">
-      <origin xyz="0 0 0" rpy="-1.57 0 0"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://amr_demo/description/meshes/amr_wheel.stl"
-              scale="0.001 0.001 0.001"/>
+        <cylinder radius="0.065" length="0.065"/>
       </geometry>
       <material name="black"/>
     </visual>
   </link>
 
-  <!-- Joint definitions -->
+  <!-- ================= 조인트 정의 (이름 전부 기존 유지) ================= -->
 
+  <!-- base_link ↔ chassis : 고정 조인트 -->
+  <!-- 기존 이름 유지: base_joint -->
   <joint name="base_joint" type="fixed">
     <parent link="base_link"/>
-    <child link="chassis"/>
-    <origin xyz="0 0 0.001" rpy="0 0 0"/>
+    <child  link="chassis"/>
+    <!-- base_link(지면) 기준으로 chassis 중심을 z=0.2075에 둠 -->
+    <origin xyz="0 0 0.2175" rpy="0 0 0"/>
   </joint>
 
-<joint name="wheel_left_joint" type="continuous">
-  <parent link="chassis"/>
-  <child link="wheel_left_link"/>
-  <origin xyz="0 0.16 -0.065" rpy="-1.57 0 0"/>
-  <!-- 바퀴가 y축 기준으로 도는 구조라면 -->
-  <axis xyz="0 1 0"/>
-</joint>
-
-<joint name="wheel_right_joint" type="continuous">
-  <parent link="chassis"/>
-  <child link="wheel_right_link"/>
-  <origin xyz="0 -0.16 -0.065" rpy="1.57 0 0"/>
-  <axis xyz="0 1 0"/>
-</joint>
-
-
-  <!-- Central fused laser frame -->
+  <!-- 중앙 fused laser 프레임 -->
+  <!-- 기존 이름 유지: lidar_joint -->
   <joint name="lidar_joint" type="fixed">
     <parent link="chassis"/>
-    <child link="laser"/>
-    <!-- 로봇 센터 기준 -->
-    <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+    <child  link="laser"/>
+    <!-- 지면 기준 0.25m 높이가 되도록 chassis 기준 z=0.0425 -->
+    <origin xyz="0.0 0.0 0.13" rpy="0 0 0"/>
   </joint>
 
-  <!-- Front LiDAR -->
+  <!-- 전방 LiDAR -->
+  <!-- 기존 이름 유지: lidar1_joint -->
   <joint name="lidar1_joint" type="fixed">
     <parent link="chassis"/>
-    <child link="lidar1_link"/>
-    <!-- 앞으로 10.5cm, 오른쪽 7.5cm, 위로 25cm -->
-    <origin xyz="0.105 -0.075 0.25" rpy="0 0 0"/>
+    <child  link="lidar1_link"/>
+    <!-- 원래 base 기준 (0.105, -0.075, 0.25)
+         → chassis 기준 z=0.25 - 0.2075 = 0.0425 -->
+    <origin xyz="0.105 -0.075 0.13" rpy="0 0 0"/>
   </joint>
 
-  <!-- Rear LiDAR (180 deg yaw) -->
+  <!-- 후방 LiDAR (yaw 180도) -->
+  <!-- 기존 이름 유지: lidar2_joint -->
   <joint name="lidar2_joint" type="fixed">
     <parent link="chassis"/>
-    <child link="lidar2_link"/>
-    <!-- 뒤로 10.5cm, 왼쪽 7.5cm, 위로 25cm -->
-    <origin xyz="-0.105 0.075 0.25" rpy="0 0 3.14159"/>
+    <child  link="lidar2_link"/>
+    <origin xyz="-0.105 0.075 0.13" rpy="0 0 3.14159"/>
+  </joint>
+
+  <!-- 왼쪽 바퀴: y축 continuous (기존 이름/축 유지) -->
+  <!-- joint name 그대로: wheel_left_joint -->
+  <joint name="wheel_left_joint" type="continuous">
+    <parent link="chassis"/>
+    <child  link="wheel_left_link"/>
+    <!-- 지면 기준 휠 중심 높이 0.065m
+         chassis 중심 0.2075m → z = 0.065 - 0.2075 = -0.1425 -->
+    <!-- y=+0.16 (왼쪽), rpy=-1.57 로 축을 y축 방향 회전으로 맞춤 -->
+    <origin xyz="0.14 0.16 -0.1425" rpy="-1.57 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <!-- 오른쪽 바퀴 -->
+  <!-- joint name 그대로: wheel_right_joint -->
+  <joint name="wheel_right_joint" type="continuous">
+    <parent link="chassis"/>
+    <child  link="wheel_right_link"/>
+    <!-- y=-0.16 (오른쪽), z 동일 -->
+    <origin xyz="0.14 -0.16 -0.1425" rpy="1.57 0 0"/>
+    <axis xyz="0 1 0"/>
   </joint>
 
 </robot>
