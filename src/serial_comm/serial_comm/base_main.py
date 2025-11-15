@@ -279,8 +279,7 @@ class Nodelet(Node):
         self.msg_wheelmotor.current1 = int(self.md.current1)
         self.msg_wheelmotor.current2 = int(self.md.current2)
 
-        # 왼/오 바퀴 속도 부호 정리 (왼쪽 반전)
-        rpm_left = -self.md.rpm1
+        rpm_left = self.md.rpm1
         rpm_right = self.md.rpm2
 
         self.msg_wheelmotor.v_x = (rpm_left + rpm_right) * np.pi * self.wheel_diameter / (60 * 2 * 4.33)
@@ -300,7 +299,7 @@ class Nodelet(Node):
 
         # 오돔 기준 왼쪽 부호 반전
         delta_left_enc = -delta_pos1
-        delta_right_enc = delta_pos2
+        delta_right_enc = -delta_pos2
 
         left_wheel_disp = (delta_left_enc / self.md.encoder_gain) * (np.pi * self.wheel_diameter)
         right_wheel_disp = (delta_right_enc / self.md.encoder_gain) * (np.pi * self.wheel_diameter)
