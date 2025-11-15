@@ -5,6 +5,8 @@ from sensor_msgs.msg import Joy
 from amr_msgs.msg import WheelMotor
 from geometry_msgs.msg import Twist, TransformStamped
 from sensor_msgs.msg import LaserScan, PointCloud2
+from sensor_msgs.msg import JointState
+
 from nav_msgs.msg import Odometry
 from tf2_ros import TransformBroadcaster, TransformListener, Buffer
 from tf_transformations import quaternion_from_euler, euler_from_quaternion
@@ -29,6 +31,7 @@ class Nodelet(Node):
         self.sub_joy = self.create_subscription(Joy, '/joy', self.joy_callback, 100)
         self.sub_cmd_vel = self.create_subscription(Twist, '/cmd_vel', self.cmd_vel_callback, 100)
         self.stm_pub = self.create_publisher(String, '/stm_command', 10)
+        self.joint_state_pub = self.create_publisher(JointState, 'joint_states', 10)
 
         self.amr_data_distance = self.create_publisher(String, '/amr_data_distance', 10)
         self.amr_data_lift = self.create_publisher(String, '/amr_data_lift', 10)
@@ -146,9 +149,11 @@ class Nodelet(Node):
         self.marker_rotation_en_count = 0.
         self.marker7_1 = True
 
+
     def timer_callback(self):
         self.loopcnt += 1
 
+        # ---------- 1) 첫 루프 초기화 ---------- #
         if self.firstloop:
             self.md.send_vel_cmd(self.velocity1, self.velocity2)
             self.md.recv_motor_state()
@@ -161,7 +166,9 @@ class Nodelet(Node):
             self.firstloop = False
             return
 
+        # ---------- 2) 조이스틱 / 자동 제어 ---------- #
         if self.JOY_CONTROL:
+            # 조이스틱 모드
             self.vel_input1 = self.v_gain * self.joy_fb
             self.vel_input1 -= self.w_gain * self.joy_lr
             self.vel_input2 = self.v_gain * self.joy_fb
@@ -174,15 +181,18 @@ class Nodelet(Node):
             self.vel_input2_old = self.vel_input2
 
             if self.joy_stop == 1:
+                # 위치 유지
                 self.md.send_position_cmd(self.md.pos1, self.md.pos2, int(60), int(60))
                 self.get_logger().info('stop')
             else:
+                # 속도 제어
                 self.md.send_vel_cmd(self.vel_input1, self.vel_input2)
 
             self.msg_wheelmotor.target1 = int(self.vel_input1)
             self.msg_wheelmotor.target2 = int(self.vel_input2)
 
         else:
+            # 자동 모드 (마커 기반 dead-reckoning)
             if self.marker_detected and not self.marker_deadreckonmode:
                 self.marker_detected_count += 1
                 self.get_logger().info(f'count: {self.marker_detected_count}')
@@ -202,6 +212,7 @@ class Nodelet(Node):
                     self.marker_deadreckonmode = False
                     self.target_marker_id = self.next_marker_id
                     self.marker_moving_distance = 0.
+
             if self.marker_deadreckonmode and self.target_marker_id == 7:
                 wheel_separation = 0.298
                 wheel_diameter = 0.17
@@ -231,13 +242,36 @@ class Nodelet(Node):
 
             self.marker_detected = False
 
-            self.md.send_position_cmd(int(self.target_pos1), int(self.target_pos2), int(60 * 4.33), int(60 * 4.33))
+            # 위치 제어 명령 전송
+            self.md.send_position_cmd(
+                int(self.target_pos1),
+                int(self.target_pos2),
+                int(60 * 4.33),
+                int(60 * 4.33)
+            )
 
             self.msg_wheelmotor.target1 = int(self.target_pos1)
             self.msg_wheelmotor.target2 = int(self.target_pos2)
 
+        # ---------- 3) 모터 상태 수신 ---------- #
         self.md.recv_motor_state()
 
+        # ---------- 4) JointState 퍼블리시 (휠 TF용) ---------- #
+        # 오돔에서 왼쪽은 부호를 반대로 쓰고 있으니 여기서도 맞춰줌
+        left_pos_enc = -self.md.pos1       # 왼쪽 엔코더 부호 반전
+        right_pos_enc = self.md.pos2       # 오른쪽 그대로
+
+        left_pos_rad = 2.0 * np.pi * (left_pos_enc / self.md.encoder_gain)
+        right_pos_rad = 2.0 * np.pi * (right_pos_enc / self.md.encoder_gain)
+
+        js = JointState()
+        now = self.get_clock().now().to_msg()
+        js.header.stamp = now
+        js.name = ['wheel_left_joint', 'wheel_right_joint']
+        js.position = [left_pos_rad, right_pos_rad]
+        self.joint_state_pub.publish(js)
+
+        # ---------- 5) WheelMotor 메시지 업데이트 ---------- #
         self.msg_wheelmotor.position1 = self.md.pos1
         self.msg_wheelmotor.position2 = self.md.pos2
         self.msg_wheelmotor.velocity1 = self.md.rpm1
@@ -245,63 +279,56 @@ class Nodelet(Node):
         self.msg_wheelmotor.current1 = int(self.md.current1)
         self.msg_wheelmotor.current2 = int(self.md.current2)
 
-        # >>> 수정: 왼쪽/오른쪽 바퀴 속도 부호 정리 (왼쪽 부호 반전)
-        rpm_left = -self.md.rpm1    # left wheel
-        rpm_right = self.md.rpm2    # right wheel
+        # 왼/오 바퀴 속도 부호 정리 (왼쪽 반전)
+        rpm_left = -self.md.rpm1
+        rpm_right = self.md.rpm2
 
         self.msg_wheelmotor.v_x = (rpm_left + rpm_right) * np.pi * self.wheel_diameter / (60 * 2 * 4.33)
         self.msg_wheelmotor.w_z = -(rpm_right - rpm_left) * np.pi * self.wheel_diameter / (60 * self.wheel_separation * 4.33)
-        # <<< 수정 끝
 
         self.pub.publish(self.msg_wheelmotor)
 
-        #############################odom 5/30################################
-
+        # ---------- 6) 오돔 계산 ---------- #
         self.cur_pos1 = self.md.pos1 - self.del_pos1
         self.cur_pos2 = self.md.pos2 - self.del_pos2
 
-        # Calculate change in encoder values
         delta_pos1 = self.cur_pos1 - self.last_pos1
         delta_pos2 = self.cur_pos2 - self.last_pos2
 
-        # Update last encoder positions
         self.last_pos1 = self.cur_pos1
         self.last_pos2 = self.cur_pos2
 
-        # >>> 수정: 오돔용 엔코더 부호 보정 (왼쪽만 반전)
-        delta_left_enc = -delta_pos1      # left wheel encoder (sign flipped)
-        delta_right_enc = delta_pos2      # right wheel encoder as is
+        # 오돔 기준 왼쪽 부호 반전
+        delta_left_enc = -delta_pos1
+        delta_right_enc = delta_pos2
 
         left_wheel_disp = (delta_left_enc / self.md.encoder_gain) * (np.pi * self.wheel_diameter)
         right_wheel_disp = (delta_right_enc / self.md.encoder_gain) * (np.pi * self.wheel_diameter)
-        # <<< 수정 끝
 
-        # Calculate time difference
         current_time = self.get_clock().now()
         dt = (current_time - self.last_time).nanoseconds / 1e9
         self.last_time = current_time
 
-        # Calculate linear and angular velocities
         linear_velocity = (left_wheel_disp + right_wheel_disp) / (2.0 * dt)
         angular_velocity = -(right_wheel_disp - left_wheel_disp) / (self.wheel_separation * dt)
 
-        # Update pose
         self.pose_x += linear_velocity * np.cos(self.pose_theta) * dt
         self.pose_y += linear_velocity * np.sin(self.pose_theta) * dt
         self.pose_theta += angular_velocity * dt
-        if self.pose_theta > np.pi:
-            self.pose_theta = self.pose_theta - (2 * np.pi)
-        if self.pose_theta < -np.pi:
-            self.pose_theta = self.pose_theta + (2 * np.pi)
 
-        # Update accumulated_distance
+        if self.pose_theta > np.pi:
+            self.pose_theta -= 2 * np.pi
+        if self.pose_theta < -np.pi:
+            self.pose_theta += 2 * np.pi
+
+        # 누적 이동 거리
         self.accumulated_distance += np.fabs(linear_velocity) * dt
         amr_data_distance_ = String()
         amr_msg_string = f"{self.accumulated_distance:.3f} (m)"
         amr_data_distance_.data = amr_msg_string
         self.amr_data_distance.publish(amr_data_distance_)
 
-        # Publish odometry message
+        # ---------- 7) Odometry 퍼블리시 ---------- #
         odom_msg = Odometry()
         odom_msg.header.stamp = current_time.to_msg()
         odom_msg.header.frame_id = 'odom'
@@ -319,19 +346,21 @@ class Nodelet(Node):
 
         self.odom_pub.publish(odom_msg)
 
-        # Publish transform over TF
+        # ---------- 8) TF (odom → base_link) 브로드캐스트 ---------- #
         transform = TransformStamped()
         transform.header.stamp = current_time.to_msg()
         transform.header.frame_id = 'odom'
         transform.child_frame_id = 'base_link'
         transform.transform.translation.x = self.pose_x
         transform.transform.translation.y = self.pose_y
-        transform.transform.translation.z = 0.
+        transform.transform.translation.z = 0.0
         transform.transform.rotation.x = q[0]
         transform.transform.rotation.y = q[1]
         transform.transform.rotation.z = q[2]
         transform.transform.rotation.w = q[3]
+
         self.tf_broadcaster.sendTransform(transform)
+
 
     def transform_pose_to_map(self, x, y, theta, transform):
         tx = transform.translation.x
