@@ -151,13 +151,13 @@ class Nodelet(Node):
         #  - 지금 상황: fb / lr 가 서로 뒤바뀐 상태였으므로
         #    fb ← axes[2], lr ← axes[1] 로 재매핑
         # ----------------------------------------
-        self.idx_axis_fb = 2      # '앞/뒤'로 쓰고 싶은 축 인덱스
-        self.idx_axis_lr = 1      # '좌/우 회전'으로 쓰고 싶은 축 인덱스
+        self.idx_axis_fb = 1      # '앞/뒤'로 쓰고 싶은 축 인덱스
+        self.idx_axis_lr = 2      # '좌/우 회전'으로 쓰고 싶은 축 인덱스
 
         # 위로 밀면 +전진, 왼쪽으로 밀면 +회전(반시계) 기준으로 맞추고 싶으면
         # 부호만 여기서 조정하면 됨
-        self.sign_axis_fb = -1.0  # axis 값과 전진 방향이 반대면 -1.0
-        self.sign_axis_lr = -1.0  # axis 값과 좌/우 회전 방향이 반대면 -1.0
+        self.sign_axis_fb = 1.0  # axis 값과 전진 방향이 반대면 -1.0
+        self.sign_axis_lr = 1.0  # axis 값과 좌/우 회전 방향이 반대면 -1.0
 
 
 
