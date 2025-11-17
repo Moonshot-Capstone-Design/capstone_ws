@@ -461,30 +461,6 @@ class Nodelet(Node):
     def Lowpass_filter(self, vel_input, vel_input_1, alpha):
         return alpha * vel_input + (1 - alpha) * vel_input_1
 
-    def marker_callback(self, msg):
-        if not self.JOY_CONTROL:
-            if self.target_marker_id in msg.marker_ids:
-                self.marker_detected = True
-                index = msg.marker_ids.index(self.target_marker_id)
-                pose = msg.poses[index]
-
-                self.marker_x = pose.position.x
-                self.marker_y = pose.position.y
-                z = pose.position.z
-
-                qx = pose.orientation.x
-                qy = pose.orientation.y
-                qz = pose.orientation.z
-                qw = pose.orientation.w
-
-                roll, pitch, yaw = euler_from_quaternion([qx, qy, qz, qw])
-                yaw = yaw * 180 / np.pi
-                self.get_logger().info(f'yaw: {yaw}')
-                self.get_logger().info(f'self.pose_theta: {self.pose_theta}')
-            else:
-                self.get_logger().info(f'Target marker ID {self.target_marker_id} not found.')
-
-
 def main(args=None):
     rclpy.init(args=args)
     node = Nodelet()
