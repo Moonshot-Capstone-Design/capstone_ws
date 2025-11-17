@@ -57,27 +57,27 @@ class Nodelet(Node):
         self.md = MotorDriver()
 
         # PID related variables
-        self.p_gain = 1.
-        self.i_gain = 0.
+        self.p_gain = 1.0
+        self.i_gain = 0.0
         self.d_gain = 0.01
         self.forget = 0.99
 
-        self.err1_prev, self.err1_i = 0., 0.
-        self.err2_prev, self.err2_i = 0., 0.
+        self.err1_prev, self.err1_i = 0.0, 0.0
+        self.err2_prev, self.err2_i = 0.0, 0.0
         self.torque1, self.torque2 = 0, 0
         self.velocity1, self.velocity2 = 0, 0
 
         # target position
-        self.target_pos1, self.target_pos2 = 0, 0
+        self.target_pos1, self.target_pos2 = 0.0, 0.0
 
         # joy gain
-        self.joy_fb = 0
-        self.joy_lr = 0
-        self.v_gain = 100
-        self.w_gain = 50
+        self.joy_fb = 0.0
+        self.joy_lr = 0.0
+        self.v_gain = 100.0
+        self.w_gain = 50.0
 
-        self.joy_r2 = 0
-        self.joy_l2 = 0
+        self.joy_r2 = 0.0
+        self.joy_l2 = 0.0
         self.change_mode = 0
         self.joy_stop = 0
         self.joy_lift_down_old = 0
@@ -88,14 +88,13 @@ class Nodelet(Node):
         self.gain_count = 2
         self.gain_list = [0.5, 0.7, 1.0, 1.3, 1.5, 1.7, 2.0, 2.3, 2.5, 4.0]
 
-        # >>> 수정: 버튼 edge 검출용 이전 값 초기화
+        # 버튼 edge 검출용 이전 값 초기화
         self.joy_speed_up_old = 0
         self.joy_speed_down_old = 0
-        # <<< 수정 끝
 
         self.msg_wheelmotor = WheelMotor()
 
-        #odom param
+        # odom param
         self.wheel_separation = 0.32  # Adjust as necessary
         self.wheel_diameter = 0.13    # Adjust as necessary
         self.pose_x = 0.0
@@ -106,14 +105,6 @@ class Nodelet(Node):
         # accumulated_distance
         self.accumulated_distance = 0.0
         self.count_lift = 0
-
-        # Encoder positions
-        self.last_pos1 = 0.0
-        self.last_pos2 = 0.0
-        self.cur_pos1 = 0.0
-        self.cur_pos2 = 0.0
-        self.del_pos1 = 0.0
-        self.del_pos2 = 0.0
 
         # cmd_vel param
         self.cmd_vel_r = 0.0
@@ -148,18 +139,12 @@ class Nodelet(Node):
 
         # ----------------------------------------
         # Joystick 축 인덱스 / 부호
-        #  - 지금 상황: fb / lr 가 서로 뒤바뀐 상태였으므로
-        #    fb ← axes[2], lr ← axes[1] 로 재매핑
         # ----------------------------------------
         self.idx_axis_fb = 1      # '앞/뒤'로 쓰고 싶은 축 인덱스
         self.idx_axis_lr = 2      # '좌/우 회전'으로 쓰고 싶은 축 인덱스
 
-        # 위로 밀면 +전진, 왼쪽으로 밀면 +회전(반시계) 기준으로 맞추고 싶으면
-        # 부호만 여기서 조정하면 됨
         self.sign_axis_fb = -1.0  # axis 값과 전진 방향이 반대면 -1.0
         self.sign_axis_lr = -1.0  # axis 값과 좌/우 회전 방향이 반대면 -1.0
-
-
 
         self.target_marker_id = 3
 
@@ -169,13 +154,14 @@ class Nodelet(Node):
         self.marker_deadreckonmode = False
         self.marker_target_distance = 0.9
         self.marker_target_distance2 = 0.9
-        self.marker_target_encoder = self.marker_target_distance / (np.pi * self.wheel_diameter / self.md.encoder_gain)
-        self.marker_moving_distance = 0
-        self.marker_moving_distance2 = 0
+        self.marker_target_encoder = self.marker_target_distance / (
+            np.pi * self.wheel_diameter / self.md.encoder_gain
+        )
+        self.marker_moving_distance = 0.0
+        self.marker_moving_distance2 = 0.0
         self.next_marker_id = 7  # Update target marker ID to the next marker
-        self.marker_rotation_en_count = 0.
+        self.marker_rotation_en_count = 0.0
         self.marker7_1 = True
-
 
     def timer_callback(self):
         self.loopcnt += 1
@@ -201,7 +187,6 @@ class Nodelet(Node):
 
             self.firstloop = False
             return
-
 
         # ---------- 2) 조이스틱 / 자동 제어 ---------- #
         if self.JOY_CONTROL:
@@ -235,11 +220,11 @@ class Nodelet(Node):
                 self.get_logger().info(f'count: {self.marker_detected_count}')
             if self.marker_detected_count > 20:
                 self.marker_deadreckonmode = True
-                self.marker_moving_distance = 0
+                self.marker_moving_distance = 0.0
                 self.marker_detected_count = 0
 
             if self.marker_deadreckonmode and self.target_marker_id == 3:
-                vel_meter = self.marker_target_distance / 4.
+                vel_meter = self.marker_target_distance / 4.0
                 vel_enc = vel_meter / (np.pi * self.wheel_diameter / self.md.encoder_gain)
                 if self.marker_moving_distance < self.marker_target_distance:
                     self.target_pos1 += vel_enc * self.dt
@@ -248,32 +233,34 @@ class Nodelet(Node):
                 else:
                     self.marker_deadreckonmode = False
                     self.target_marker_id = self.next_marker_id
-                    self.marker_moving_distance = 0.
+                    self.marker_moving_distance = 0.0
 
             if self.marker_deadreckonmode and self.target_marker_id == 7:
                 wheel_separation = 0.298
                 wheel_diameter = 0.17
                 encoder_pulses_per_wheel = 240
-                vel_meter = self.marker_target_distance2 / 4.
+                vel_meter = self.marker_target_distance2 / 4.0
                 vel_enc = vel_meter / (np.pi * self.wheel_diameter / self.md.encoder_gain)
-                R = wheel_separation / 2
-                distance_per_wheel = (np.pi * R) / 2
+                R = wheel_separation / 2.0
+                distance_per_wheel = (np.pi * R) / 2.0
                 wheel_circumference = np.pi * wheel_diameter
                 rotation_encoder_count = (distance_per_wheel / wheel_circumference) * encoder_pulses_per_wheel
 
                 if self.marker_rotation_en_count < rotation_encoder_count and self.marker7_1 is True:
-                    self.target_pos1 += rotation_encoder_count / 100
-                    self.target_pos2 -= rotation_encoder_count / 100
-                    self.marker_rotation_en_count += rotation_encoder_count / 100
+                    self.target_pos1 += rotation_encoder_count / 100.0
+                    self.target_pos2 -= rotation_encoder_count / 100.0
+                    self.marker_rotation_en_count += rotation_encoder_count / 100.0
                 elif self.marker_moving_distance2 < self.marker_target_distance2 and self.marker7_1 is False:
                     self.target_pos1 += vel_enc * self.dt
                     self.target_pos2 += vel_enc * self.dt
                     self.marker_moving_distance2 += vel_meter * self.dt
                 else:
-                    if (self.marker_rotation_en_count > rotation_encoder_count) and (self.marker_moving_distance2 > self.marker_target_distance2):
+                    if (self.marker_rotation_en_count > rotation_encoder_count) and (
+                        self.marker_moving_distance2 > self.marker_target_distance2
+                    ):
                         self.marker_deadreckonmode = False
-                        self.marker_moving_distance2 = 0.
-                        self.marker_rotation_en_count = 0.
+                        self.marker_moving_distance2 = 0.0
+                        self.marker_rotation_en_count = 0.0
                         self.target_marker_id = 3
                     self.marker7_1 is False
 
@@ -283,8 +270,8 @@ class Nodelet(Node):
             self.md.send_position_cmd(
                 int(self.target_pos1),
                 int(self.target_pos2),
-                int(60 * 4.33),
-                int(60 * 4.33)
+                int(60 * self.gear_ratio),
+                int(60 * self.gear_ratio),
             )
 
             self.msg_wheelmotor.target1 = int(self.target_pos1)
@@ -308,7 +295,6 @@ class Nodelet(Node):
         js.position = [left_pos_rad, right_pos_rad]
         self.joint_state_pub.publish(js)
 
-
         # ---------- 5) WheelMotor 메시지 업데이트 ---------- #
         self.msg_wheelmotor.position1 = self.md.pos1
         self.msg_wheelmotor.position2 = self.md.pos2
@@ -320,20 +306,13 @@ class Nodelet(Node):
         rpm_left = self.md.rpm1
         rpm_right = self.md.rpm2
 
-        self.msg_wheelmotor.v_x = -(rpm_left + rpm_right) * np.pi * self.wheel_diameter / (60 * 2 * 4.33)
-        self.msg_wheelmotor.w_z = -(rpm_right - rpm_left) * np.pi * self.wheel_diameter / (60 * self.wheel_separation * 4.33)
+        # 하드웨어 방향과 ROS x축 방향을 맞추기 위해 부호 조정
+        self.msg_wheelmotor.v_x = -(rpm_left + rpm_right) * np.pi * self.wheel_diameter / (60.0 * 2.0 * self.gear_ratio)
+        self.msg_wheelmotor.w_z = -(rpm_right - rpm_left) * np.pi * self.wheel_diameter / (
+            60.0 * self.wheel_separation * self.gear_ratio
+        )
 
         self.pub.publish(self.msg_wheelmotor)
-
-        # ---------- 6) 오돔 계산 ---------- #
-        self.cur_pos1 = self.md.pos1 - self.del_pos1
-        self.cur_pos2 = self.md.pos2 - self.del_pos2
-
-        delta_pos1 = self.cur_pos1 - self.last_pos1
-        delta_pos2 = self.cur_pos2 - self.last_pos2
-
-        self.last_pos1 = self.cur_pos1
-        self.last_pos2 = self.cur_pos2
 
         # ---------- 6) 오돔 계산 (Encoder → (x, y, θ)) ---------- #
         # 엔코더 값 → 부호/오프셋 반영한 "상대" 값
@@ -347,7 +326,7 @@ class Nodelet(Node):
         self.last_left_enc = left_enc
         self.last_right_enc = right_enc
 
-        # 엔코더 카운트 → 바퀴 선속도(거리)
+        # 엔코더 카운트 → 바퀴 이동 거리(m)
         left_wheel_disp = (delta_left_enc / self.md.encoder_gain) * (np.pi * self.wheel_diameter)
         right_wheel_disp = (delta_right_enc / self.md.encoder_gain) * (np.pi * self.wheel_diameter)
 
@@ -358,7 +337,7 @@ class Nodelet(Node):
             dt = self.dt  # 보호용 fallback
         self.last_time = current_time
 
-        # diff-drive 정석 공식
+        # diff-drive 정석 공식 (부호 포함)
         linear_velocity = -(left_wheel_disp + right_wheel_disp) / (2.0 * dt)
         angular_velocity = (right_wheel_disp - left_wheel_disp) / (self.wheel_separation * dt)
 
@@ -369,10 +348,9 @@ class Nodelet(Node):
 
         # 각도 wrap
         if self.pose_theta > np.pi:
-            self.pose_theta -= 2 * np.pi
+            self.pose_theta -= 2.0 * np.pi
         elif self.pose_theta < -np.pi:
-            self.pose_theta += 2 * np.pi
-
+            self.pose_theta += 2.0 * np.pi
 
         # 누적 이동 거리
         self.accumulated_distance += np.fabs(linear_velocity) * dt
@@ -389,7 +367,7 @@ class Nodelet(Node):
         odom_msg.pose.pose.position.x = self.pose_x
         odom_msg.pose.pose.position.y = self.pose_y
 
-        q = quaternion_from_euler(0, 0, self.pose_theta)
+        q = quaternion_from_euler(0.0, 0.0, self.pose_theta)
         odom_msg.pose.pose.orientation.x = q[0]
         odom_msg.pose.pose.orientation.y = q[1]
         odom_msg.pose.pose.orientation.z = q[2]
@@ -414,7 +392,6 @@ class Nodelet(Node):
 
         self.tf_broadcaster.sendTransform(transform)
 
-
     def transform_pose_to_map(self, x, y, theta, transform):
         tx = transform.translation.x
         ty = transform.translation.y
@@ -425,17 +402,17 @@ class Nodelet(Node):
         transformation_matrix = np.array([
             [np.cos(yaw), -np.sin(yaw), tx],
             [np.sin(yaw), np.cos(yaw), ty],
-            [0, 0, 1]
+            [0.0, 0.0, 1.0]
         ])
 
-        pose_odom = np.array([x, y, 1])
+        pose_odom = np.array([x, y, 1.0])
         pose_map = np.dot(transformation_matrix, pose_odom)
 
         theta_map = theta + yaw
         if theta_map > np.pi:
-            theta_map = theta_map - (2 * np.pi)
+            theta_map -= 2.0 * np.pi
         if theta_map < -np.pi:
-            theta_map = theta_map + (2 * np.pi)
+            theta_map += 2.0 * np.pi
 
         return pose_map[0], pose_map[1], theta_map
 
@@ -502,7 +479,6 @@ class Nodelet(Node):
         # -------------------------------------------------
         # 1) 조이스틱 입력 읽기
         # -------------------------------------------------
-        # === 조이스틱 축 매핑 (축 인덱스/부호는 __init__에서 설정) ===
         raw_fb = A(self.idx_axis_fb)  # 전/후 인덱스
         raw_lr = A(self.idx_axis_lr)  # 좌/우 인덱스
 
@@ -514,7 +490,7 @@ class Nodelet(Node):
 
         self.joy_stop = B(0)
 
-        self.joy_speed_up   = B(11)
+        self.joy_speed_up = B(11)
         self.joy_speed_down = B(10)
 
         # -------------------------------------------------
@@ -530,27 +506,21 @@ class Nodelet(Node):
                 self.gain_count -= 1
                 self.get_logger().info(f"[GAIN-] => {self.gain_list[self.gain_count]}")
 
-        self.joy_speed_up_old   = self.joy_speed_up
+        self.joy_speed_up_old = self.joy_speed_up
         self.joy_speed_down_old = self.joy_speed_down
 
         # -------------------------------------------------
         # 3) 회전 시에만 gain 을 줄이는 로직
-        #    - joy_fb: 전후 입력
-        #    - joy_lr: 좌우(회전) 입력
-        #    회전 비율(turn_ratio)이 클수록 전체 gain 을 줄인다.
         # -------------------------------------------------
         gain = self.gain_list[self.gain_count]
 
-        # 회전 비율 (0.0 ~ 1.0)
-        #   - 전후만 하면 turn_ratio ≈ 0
-        #   - 회전만 하면 turn_ratio ≈ 1
         abs_fb = abs(self.joy_fb)
         abs_lr = abs(self.joy_lr)
-        denom  = abs_fb + abs_lr + 1e-3   # 0 나눗셈 방지용 작은 값
+        denom = abs_fb + abs_lr + 1e-3   # 0 나눗셈 방지용 작은 값
 
         turn_ratio = abs_lr / denom
 
-        # 회전만 할 때 최소로 줄일 gain 비율 (예: 0.4 = 40%)
+        # 회전만 할 때 최소로 줄일 gain 비율
         MIN_TURN_GAIN_RATIO = 0.8
 
         # turn_ratio가 0 → effective_gain = gain
@@ -573,8 +543,8 @@ class Nodelet(Node):
             self.change_mode = 0
             self.target_pos1 = self.md.pos1
             self.target_pos2 = self.md.pos2
-            self.vel_input1  = 0.0
-            self.vel_input2  = 0.0
+            self.vel_input1 = 0.0
+            self.vel_input2 = 0.0
 
             self.JOY_CONTROL = not self.JOY_CONTROL
             if self.JOY_CONTROL:
@@ -582,9 +552,8 @@ class Nodelet(Node):
             else:
                 self.get_logger().info("=== Auto Control Mode ===")
 
-
     def Lowpass_filter(self, vel_input, vel_input_1, alpha):
-        return alpha * vel_input + (1 - alpha) * vel_input_1
+        return alpha * vel_input + (1.0 - alpha) * vel_input_1
 
     def marker_callback(self, msg):
         if not self.JOY_CONTROL:
@@ -603,7 +572,7 @@ class Nodelet(Node):
                 qw = pose.orientation.w
 
                 roll, pitch, yaw = euler_from_quaternion([qx, qy, qz, qw])
-                yaw = yaw * 180 / np.pi
+                yaw = yaw * 180.0 / np.pi
                 self.get_logger().info(f'yaw: {yaw}')
                 self.get_logger().info(f'self.pose_theta: {self.pose_theta}')
             else:
