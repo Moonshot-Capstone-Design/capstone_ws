@@ -146,6 +146,23 @@ class Nodelet(Node):
         self.sign_axis_fb = -1.0  # axis 값과 전진 방향이 반대면 -1.0
         self.sign_axis_lr = -1.0  # axis 값과 좌/우 회전 방향이 반대면 -1.0
 
+        self.target_marker_id = 3
+
+        # aruco marker flag
+        self.marker_detected = False
+        self.marker_detected_count = 0
+        self.marker_deadreckonmode = False
+        self.marker_target_distance = 0.9
+        self.marker_target_distance2 = 0.9
+        self.marker_target_encoder = self.marker_target_distance / (
+            np.pi * self.wheel_diameter / self.md.encoder_gain
+        )
+        self.marker_moving_distance = 0.0
+        self.marker_moving_distance2 = 0.0
+        self.next_marker_id = 7  # Update target marker ID to the next marker
+        self.marker_rotation_en_count = 0.0
+        self.marker7_1 = True
+
     def timer_callback(self):
         self.loopcnt += 1
 
@@ -195,6 +212,70 @@ class Nodelet(Node):
 
             self.msg_wheelmotor.target1 = int(self.vel_input1)
             self.msg_wheelmotor.target2 = int(self.vel_input2)
+
+        else:
+            # 자동 모드 (마커 기반 dead-reckoning)
+            if self.marker_detected and not self.marker_deadreckonmode:
+                self.marker_detected_count += 1
+                self.get_logger().info(f'count: {self.marker_detected_count}')
+            if self.marker_detected_count > 20:
+                self.marker_deadreckonmode = True
+                self.marker_moving_distance = 0.0
+                self.marker_detected_count = 0
+
+            if self.marker_deadreckonmode and self.target_marker_id == 3:
+                vel_meter = self.marker_target_distance / 4.0
+                vel_enc = vel_meter / (np.pi * self.wheel_diameter / self.md.encoder_gain)
+                if self.marker_moving_distance < self.marker_target_distance:
+                    self.target_pos1 += vel_enc * self.dt
+                    self.target_pos2 += vel_enc * self.dt
+                    self.marker_moving_distance += vel_meter * self.dt
+                else:
+                    self.marker_deadreckonmode = False
+                    self.target_marker_id = self.next_marker_id
+                    self.marker_moving_distance = 0.0
+
+            if self.marker_deadreckonmode and self.target_marker_id == 7:
+                wheel_separation = 0.298
+                wheel_diameter = 0.17
+                encoder_pulses_per_wheel = 240
+                vel_meter = self.marker_target_distance2 / 4.0
+                vel_enc = vel_meter / (np.pi * self.wheel_diameter / self.md.encoder_gain)
+                R = wheel_separation / 2.0
+                distance_per_wheel = (np.pi * R) / 2.0
+                wheel_circumference = np.pi * wheel_diameter
+                rotation_encoder_count = (distance_per_wheel / wheel_circumference) * encoder_pulses_per_wheel
+
+                if self.marker_rotation_en_count < rotation_encoder_count and self.marker7_1 is True:
+                    self.target_pos1 += rotation_encoder_count / 100.0
+                    self.target_pos2 -= rotation_encoder_count / 100.0
+                    self.marker_rotation_en_count += rotation_encoder_count / 100.0
+                elif self.marker_moving_distance2 < self.marker_target_distance2 and self.marker7_1 is False:
+                    self.target_pos1 += vel_enc * self.dt
+                    self.target_pos2 += vel_enc * self.dt
+                    self.marker_moving_distance2 += vel_meter * self.dt
+                else:
+                    if (self.marker_rotation_en_count > rotation_encoder_count) and (
+                        self.marker_moving_distance2 > self.marker_target_distance2
+                    ):
+                        self.marker_deadreckonmode = False
+                        self.marker_moving_distance2 = 0.0
+                        self.marker_rotation_en_count = 0.0
+                        self.target_marker_id = 3
+                    self.marker7_1 is False
+
+            self.marker_detected = False
+
+            # 위치 제어 명령 전송
+            self.md.send_position_cmd(
+                int(self.target_pos1),
+                int(self.target_pos2),
+                int(60 * self.gear_ratio),
+                int(60 * self.gear_ratio),
+            )
+
+            self.msg_wheelmotor.target1 = int(self.target_pos1)
+            self.msg_wheelmotor.target2 = int(self.target_pos2)
 
         # ---------- 3) 모터 상태 수신 ---------- #
         self.md.recv_motor_state()
@@ -473,6 +554,30 @@ class Nodelet(Node):
 
     def Lowpass_filter(self, vel_input, vel_input_1, alpha):
         return alpha * vel_input + (1.0 - alpha) * vel_input_1
+
+    def marker_callback(self, msg):
+        if not self.JOY_CONTROL:
+            if self.target_marker_id in msg.marker_ids:
+                self.marker_detected = True
+                index = msg.marker_ids.index(self.target_marker_id)
+                pose = msg.poses[index]
+
+                self.marker_x = pose.position.x
+                self.marker_y = pose.position.y
+                z = pose.position.z
+
+                qx = pose.orientation.x
+                qy = pose.orientation.y
+                qz = pose.orientation.z
+                qw = pose.orientation.w
+
+                roll, pitch, yaw = euler_from_quaternion([qx, qy, qz, qw])
+                yaw = yaw * 180.0 / np.pi
+                self.get_logger().info(f'yaw: {yaw}')
+                self.get_logger().info(f'self.pose_theta: {self.pose_theta}')
+            else:
+                self.get_logger().info(f'Target marker ID {self.target_marker_id} not found.')
+
 
 def main(args=None):
     rclpy.init(args=args)
