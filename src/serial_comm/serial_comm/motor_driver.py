@@ -124,11 +124,10 @@ class MotorDriver:
             print("[recv_motor_state] Error: Invalid frame received")
             return
         else:
-            # ★ 부호 제거: 하드웨어가 주는 값 그대로 사용
-            self.rpm1 = Helper.uint8arr_to_int16(data[5], data[6])
+            self.rpm1 = -Helper.uint8arr_to_int16(data[5], data[6])
             self.current1 = Helper.uint8arr_to_int16(data[7], data[8])
             self.status1 = data[9]
-            self.pos1 = Helper.uint8arr_to_int32(data[10], data[11], data[12], data[13])
+            self.pos1 = -Helper.uint8arr_to_int32(data[10], data[11], data[12], data[13])
 
             self.rpm2 = Helper.uint8arr_to_int16(data[14], data[15])
             self.current2 = Helper.uint8arr_to_int16(data[16], data[17])
@@ -200,14 +199,10 @@ class MotorDriver:
     def send_position_cmd(self, p1, p2, mv1, mv2):
         pid = 206
         datanum = 15
-
-        # ★ 부호 제거: p1 그대로 사용
-        p1_ = np.array(Helper.int32_to_uint8arr(np.array(p1, dtype=np.int32)), dtype=np.uint8)
+        p1_ = np.array(Helper.int32_to_uint8arr(np.array(-p1, dtype=np.int32)), dtype=np.uint8)
         mv1_ = np.array(Helper.int16_to_uint8arr(np.array(mv1, dtype=np.int16)), dtype=np.uint8)
-
         p2_ = np.array(Helper.int32_to_uint8arr(np.array(p2, dtype=np.int32)), dtype=np.uint8)
         mv2_ = np.array(Helper.int16_to_uint8arr(np.array(mv2, dtype=np.int16)), dtype=np.uint8)
-
         data = np.array(1, dtype=np.uint8)
         data = np.append(data, p1_)
         data = np.append(data, mv1_)
@@ -227,11 +222,8 @@ class MotorDriver:
     def send_vel_cmd(self, v1, v2):
         pid = 207
         datanum = 7
-
-        # ★ 부호 제거: v1, v2 그대로 사용
-        v1_ = np.array(Helper.int16_to_uint8arr(np.array(v1, dtype=np.int16)), dtype=np.uint8)
+        v1_ = np.array(Helper.int16_to_uint8arr(np.array(-v1, dtype=np.int16)), dtype=np.uint8)
         v2_ = np.array(Helper.int16_to_uint8arr(np.array(v2, dtype=np.int16)), dtype=np.uint8)
-
         data = np.array(1, dtype=np.uint8)
         data = np.append(data, v1_)
         data = np.append(data, np.array(1, dtype=np.uint8))
