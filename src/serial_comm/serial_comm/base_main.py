@@ -320,7 +320,7 @@ class Nodelet(Node):
         rpm_left = self.md.rpm1
         rpm_right = self.md.rpm2
 
-        self.msg_wheelmotor.v_x = (rpm_left + rpm_right) * np.pi * self.wheel_diameter / (60 * 2 * 4.33)
+        self.msg_wheelmotor.v_x = -(rpm_left + rpm_right) * np.pi * self.wheel_diameter / (60 * 2 * 4.33)
         self.msg_wheelmotor.w_z = -(rpm_right - rpm_left) * np.pi * self.wheel_diameter / (60 * self.wheel_separation * 4.33)
 
         self.pub.publish(self.msg_wheelmotor)
@@ -359,7 +359,7 @@ class Nodelet(Node):
         self.last_time = current_time
 
         # diff-drive 정석 공식
-        linear_velocity = (left_wheel_disp + right_wheel_disp) / (2.0 * dt)
+        linear_velocity = -(left_wheel_disp + right_wheel_disp) / (2.0 * dt)
         angular_velocity = (right_wheel_disp - left_wheel_disp) / (self.wheel_separation * dt)
 
         # (x, y, θ) 적분
