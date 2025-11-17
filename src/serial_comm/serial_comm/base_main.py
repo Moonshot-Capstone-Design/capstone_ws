@@ -156,8 +156,8 @@ class Nodelet(Node):
 
         # 위로 밀면 +전진, 왼쪽으로 밀면 +회전(반시계) 기준으로 맞추고 싶으면
         # 부호만 여기서 조정하면 됨
-        self.sign_axis_fb = 1.0  # axis 값과 전진 방향이 반대면 -1.0
-        self.sign_axis_lr = 1.0  # axis 값과 좌/우 회전 방향이 반대면 -1.0
+        self.sign_axis_fb = -1.0  # axis 값과 전진 방향이 반대면 -1.0
+        self.sign_axis_lr = -1.0  # axis 값과 좌/우 회전 방향이 반대면 -1.0
 
 
 
@@ -551,7 +551,7 @@ class Nodelet(Node):
         turn_ratio = abs_lr / denom
 
         # 회전만 할 때 최소로 줄일 gain 비율 (예: 0.4 = 40%)
-        MIN_TURN_GAIN_RATIO = 0.4
+        MIN_TURN_GAIN_RATIO = 0.8
 
         # turn_ratio가 0 → effective_gain = gain
         # turn_ratio가 1 → effective_gain = gain * MIN_TURN_GAIN_RATIO
