@@ -197,7 +197,59 @@ class Nodelet(Node):
             self.msg_wheelmotor.target2 = int(self.vel_input2)
 
         else:
-            # 자동 모드 (현재는 /cmd_vel 기반 target_pos1/2만 사용)
+            # 자동 모드 (마커 기반 dead-reckoning)
+            if self.marker_detected and not self.marker_deadreckonmode:
+                self.marker_detected_count += 1
+                self.get_logger().info(f'count: {self.marker_detected_count}')
+            if self.marker_detected_count > 20:
+                self.marker_deadreckonmode = True
+                self.marker_moving_distance = 0.0
+                self.marker_detected_count = 0
+
+            if self.marker_deadreckonmode and self.target_marker_id == 3:
+                vel_meter = self.marker_target_distance / 4.0
+                vel_enc = vel_meter / (np.pi * self.wheel_diameter / self.md.encoder_gain)
+                if self.marker_moving_distance < self.marker_target_distance:
+                    self.target_pos1 += vel_enc * self.dt
+                    self.target_pos2 += vel_enc * self.dt
+                    self.marker_moving_distance += vel_meter * self.dt
+                else:
+                    self.marker_deadreckonmode = False
+                    self.target_marker_id = self.next_marker_id
+                    self.marker_moving_distance = 0.0
+
+            if self.marker_deadreckonmode and self.target_marker_id == 7:
+                wheel_separation = 0.298
+                wheel_diameter = 0.17
+                encoder_pulses_per_wheel = 240
+                vel_meter = self.marker_target_distance2 / 4.0
+                vel_enc = vel_meter / (np.pi * self.wheel_diameter / self.md.encoder_gain)
+                R = wheel_separation / 2.0
+                distance_per_wheel = (np.pi * R) / 2.0
+                wheel_circumference = np.pi * wheel_diameter
+                rotation_encoder_count = (distance_per_wheel / wheel_circumference) * encoder_pulses_per_wheel
+
+                if self.marker_rotation_en_count < rotation_encoder_count and self.marker7_1 is True:
+                    self.target_pos1 += rotation_encoder_count / 100.0
+                    self.target_pos2 -= rotation_encoder_count / 100.0
+                    self.marker_rotation_en_count += rotation_encoder_count / 100.0
+                elif self.marker_moving_distance2 < self.marker_target_distance2 and self.marker7_1 is False:
+                    self.target_pos1 += vel_enc * self.dt
+                    self.target_pos2 += vel_enc * self.dt
+                    self.marker_moving_distance2 += vel_meter * self.dt
+                else:
+                    if (self.marker_rotation_en_count > rotation_encoder_count) and (
+                        self.marker_moving_distance2 > self.marker_target_distance2
+                    ):
+                        self.marker_deadreckonmode = False
+                        self.marker_moving_distance2 = 0.0
+                        self.marker_rotation_en_count = 0.0
+                        self.target_marker_id = 3
+                    self.marker7_1 is False
+
+            self.marker_detected = False
+
+            # 위치 제어 명령 전송
             self.md.send_position_cmd(
                 int(self.target_pos1),
                 int(self.target_pos2),
@@ -238,9 +290,7 @@ class Nodelet(Node):
         rpm_right = self.md.rpm2
 
         # 하드웨어 방향과 ROS x축 방향을 맞추기 위해 부호 조정
-        self.msg_wheelmotor.v_x = -(rpm_left + rpm_right) * np.pi * self.wheel_diameter / (
-            60.0 * 2.0 * self.gear_ratio
-        )
+        self.msg_wheelmotor.v_x = -(rpm_left + rpm_right) * np.pi * self.wheel_diameter / (60.0 * 2.0 * self.gear_ratio)
         self.msg_wheelmotor.w_z = -(rpm_right - rpm_left) * np.pi * self.wheel_diameter / (
             60.0 * self.wheel_separation * self.gear_ratio
         )
@@ -358,12 +408,8 @@ class Nodelet(Node):
             velocity_right = (linear_velocity + (self.wheel_separation / 2.0) * angular_velocity)
             velocity_left = (linear_velocity - (self.wheel_separation / 2.0) * angular_velocity)
 
-            encoder_delta_right = (velocity_right * control_dt * self.md.encoder_gain) / (
-                np.pi * self.wheel_diameter
-            )
-            encoder_delta_left = (velocity_left * control_dt * self.md.encoder_gain) / (
-                np.pi * self.wheel_diameter
-            )
+            encoder_delta_right = (velocity_right * control_dt * self.md.encoder_gain) / (np.pi * self.wheel_diameter)
+            encoder_delta_left = (velocity_left * control_dt * self.md.encoder_gain) / (np.pi * self.wheel_diameter)
 
             self.target_pos1 += encoder_delta_left
             self.target_pos2 += encoder_delta_right
@@ -489,6 +535,8 @@ class Nodelet(Node):
             else:
                 self.get_logger().info("=== Auto Control Mode ===")
 
+    def Lowpass_filter(self, vel_input, vel_input_1, alpha):
+        return alpha * vel_input + (1.0 - alpha) * vel_input_1
 
 def main(args=None):
     rclpy.init(args=args)
