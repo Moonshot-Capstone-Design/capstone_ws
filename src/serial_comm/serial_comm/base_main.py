@@ -134,6 +134,33 @@ class Nodelet(Node):
         self.w_motor_last = 0.0
         self.alpha = 0.5
 
+        # ----------------------------------------
+        # Encoder / Odometry 설정
+        #  - 엔코더 부호(왼/오), 오프셋, 직전 값
+        # ----------------------------------------
+        self.left_encoder_sign = -1.0    # 필요 시  1.0 으로 바꿔서 테스트
+        self.right_encoder_sign = 1.0    # 필요 시 -1.0 으로 바꿔서 테스트
+
+        self.enc_left_offset = 0.0
+        self.enc_right_offset = 0.0
+        self.last_left_enc = 0.0
+        self.last_right_enc = 0.0
+
+        # ----------------------------------------
+        # Joystick 축 인덱스 / 부호
+        #  - 지금 상황: fb / lr 가 서로 뒤바뀐 상태였으므로
+        #    fb ← axes[2], lr ← axes[1] 로 재매핑
+        # ----------------------------------------
+        self.idx_axis_fb = 2      # '앞/뒤'로 쓰고 싶은 축 인덱스
+        self.idx_axis_lr = 1      # '좌/우 회전'으로 쓰고 싶은 축 인덱스
+
+        # 위로 밀면 +전진, 왼쪽으로 밀면 +회전(반시계) 기준으로 맞추고 싶으면
+        # 부호만 여기서 조정하면 됨
+        self.sign_axis_fb = -1.0  # axis 값과 전진 방향이 반대면 -1.0
+        self.sign_axis_lr = -1.0  # axis 값과 좌/우 회전 방향이 반대면 -1.0
+
+
+
         self.target_marker_id = 3
 
         # aruco marker flag
@@ -157,14 +184,24 @@ class Nodelet(Node):
         if self.firstloop:
             self.md.send_vel_cmd(self.velocity1, self.velocity2)
             self.md.recv_motor_state()
+
             self.target_pos1 = self.md.pos1
             self.target_pos2 = self.md.pos2
 
-            self.del_pos1 = self.md.pos1
-            self.del_pos2 = self.md.pos2
+            # 오돔 기준 0점(시작 엔코더 값) 저장
+            self.enc_left_offset = self.left_encoder_sign * self.md.pos1
+            self.enc_right_offset = self.right_encoder_sign * self.md.pos2
+
+            # 시작 시점에서는 상대 엔코더값 = 0
+            self.last_left_enc = 0.0
+            self.last_right_enc = 0.0
+
+            # 시간 기준 초기화
+            self.last_time = self.get_clock().now()
 
             self.firstloop = False
             return
+
 
         # ---------- 2) 조이스틱 / 자동 제어 ---------- #
         if self.JOY_CONTROL:
@@ -257,12 +294,12 @@ class Nodelet(Node):
         self.md.recv_motor_state()
 
         # ---------- 4) JointState 퍼블리시 (휠 TF용) ---------- #
-        # 오돔에서 왼쪽은 부호를 반대로 쓰고 있으니 여기서도 맞춰줌
-        left_pos_enc = -self.md.pos1       # 왼쪽 엔코더 부호 반전
-        right_pos_enc = self.md.pos2       # 오른쪽 그대로
+        # 오돔 기준 0에서 얼마나 회전했는지 (부호/오프셋 공통 사용)
+        left_enc = self.left_encoder_sign * self.md.pos1 - self.enc_left_offset
+        right_enc = self.right_encoder_sign * self.md.pos2 - self.enc_right_offset
 
-        left_pos_rad = 2.0 * np.pi * (left_pos_enc / self.md.encoder_gain)
-        right_pos_rad = 2.0 * np.pi * (right_pos_enc / self.md.encoder_gain)
+        left_pos_rad = 2.0 * np.pi * (left_enc / self.md.encoder_gain)
+        right_pos_rad = 2.0 * np.pi * (right_enc / self.md.encoder_gain)
 
         js = JointState()
         now = self.get_clock().now().to_msg()
@@ -270,6 +307,7 @@ class Nodelet(Node):
         js.name = ['wheel_left_joint', 'wheel_right_joint']
         js.position = [left_pos_rad, right_pos_rad]
         self.joint_state_pub.publish(js)
+
 
         # ---------- 5) WheelMotor 메시지 업데이트 ---------- #
         self.msg_wheelmotor.position1 = self.md.pos1
@@ -297,28 +335,44 @@ class Nodelet(Node):
         self.last_pos1 = self.cur_pos1
         self.last_pos2 = self.cur_pos2
 
-        # 오돔 기준 왼쪽 부호 반전
-        delta_left_enc = -delta_pos1
-        delta_right_enc = -delta_pos2
+        # ---------- 6) 오돔 계산 (Encoder → (x, y, θ)) ---------- #
+        # 엔코더 값 → 부호/오프셋 반영한 "상대" 값
+        left_enc = self.left_encoder_sign * self.md.pos1 - self.enc_left_offset
+        right_enc = self.right_encoder_sign * self.md.pos2 - self.enc_right_offset
 
+        # 직전 루프 대비 증가량
+        delta_left_enc = left_enc - self.last_left_enc
+        delta_right_enc = right_enc - self.last_right_enc
+
+        self.last_left_enc = left_enc
+        self.last_right_enc = right_enc
+
+        # 엔코더 카운트 → 바퀴 선속도(거리)
         left_wheel_disp = (delta_left_enc / self.md.encoder_gain) * (np.pi * self.wheel_diameter)
         right_wheel_disp = (delta_right_enc / self.md.encoder_gain) * (np.pi * self.wheel_diameter)
 
+        # 시간 간격
         current_time = self.get_clock().now()
         dt = (current_time - self.last_time).nanoseconds / 1e9
+        if dt <= 0.0:
+            dt = self.dt  # 보호용 fallback
         self.last_time = current_time
 
+        # diff-drive 정석 공식
         linear_velocity = (left_wheel_disp + right_wheel_disp) / (2.0 * dt)
-        angular_velocity = -(right_wheel_disp - left_wheel_disp) / (self.wheel_separation * dt)
+        angular_velocity = (right_wheel_disp - left_wheel_disp) / (self.wheel_separation * dt)
 
+        # (x, y, θ) 적분
         self.pose_x += linear_velocity * np.cos(self.pose_theta) * dt
         self.pose_y += linear_velocity * np.sin(self.pose_theta) * dt
         self.pose_theta += angular_velocity * dt
 
+        # 각도 wrap
         if self.pose_theta > np.pi:
             self.pose_theta -= 2 * np.pi
-        if self.pose_theta < -np.pi:
+        elif self.pose_theta < -np.pi:
             self.pose_theta += 2 * np.pi
+
 
         # 누적 이동 거리
         self.accumulated_distance += np.fabs(linear_velocity) * dt
@@ -445,17 +499,27 @@ class Nodelet(Node):
         def A(i):
             return axes[i] if i < len(axes) else 0.0
 
-        self.joy_fb = -A(1)
-        self.joy_lr = -A(2)
+        # -------------------------------------------------
+        # 1) 조이스틱 입력 읽기
+        # -------------------------------------------------
+        # === 조이스틱 축 매핑 (축 인덱스/부호는 __init__에서 설정) ===
+        raw_fb = A(self.idx_axis_fb)  # 전/후 인덱스
+        raw_lr = A(self.idx_axis_lr)  # 좌/우 인덱스
+
+        self.joy_fb = self.sign_axis_fb * raw_fb
+        self.joy_lr = self.sign_axis_lr * raw_lr
 
         self.joy_r2 = A(4)
         self.joy_l2 = A(5)
 
         self.joy_stop = B(0)
 
-        self.joy_speed_up = B(11)
+        self.joy_speed_up   = B(11)
         self.joy_speed_down = B(10)
 
+        # -------------------------------------------------
+        # 2) 속도 단계 (GAIN) 업/다운
+        # -------------------------------------------------
         if (self.joy_speed_up == 1) and (self.joy_speed_up_old == 0):
             if self.gain_count < len(self.gain_list) - 1:
                 self.gain_count += 1
@@ -466,13 +530,40 @@ class Nodelet(Node):
                 self.gain_count -= 1
                 self.get_logger().info(f"[GAIN-] => {self.gain_list[self.gain_count]}")
 
-        self.joy_speed_up_old = self.joy_speed_up
+        self.joy_speed_up_old   = self.joy_speed_up
         self.joy_speed_down_old = self.joy_speed_down
 
+        # -------------------------------------------------
+        # 3) 회전 시에만 gain 을 줄이는 로직
+        #    - joy_fb: 전후 입력
+        #    - joy_lr: 좌우(회전) 입력
+        #    회전 비율(turn_ratio)이 클수록 전체 gain 을 줄인다.
+        # -------------------------------------------------
         gain = self.gain_list[self.gain_count]
-        self.joy_fb *= gain
-        self.joy_lr *= gain * 0.5
 
+        # 회전 비율 (0.0 ~ 1.0)
+        #   - 전후만 하면 turn_ratio ≈ 0
+        #   - 회전만 하면 turn_ratio ≈ 1
+        abs_fb = abs(self.joy_fb)
+        abs_lr = abs(self.joy_lr)
+        denom  = abs_fb + abs_lr + 1e-3   # 0 나눗셈 방지용 작은 값
+
+        turn_ratio = abs_lr / denom
+
+        # 회전만 할 때 최소로 줄일 gain 비율 (예: 0.4 = 40%)
+        MIN_TURN_GAIN_RATIO = 0.4
+
+        # turn_ratio가 0 → effective_gain = gain
+        # turn_ratio가 1 → effective_gain = gain * MIN_TURN_GAIN_RATIO
+        effective_gain = gain * (1.0 - turn_ratio * (1.0 - MIN_TURN_GAIN_RATIO))
+
+        # 최종 스케일 적용
+        self.joy_fb *= effective_gain
+        self.joy_lr *= effective_gain * 0.5  # 기존처럼 회전은 0.5 배 더 줄임
+
+        # -------------------------------------------------
+        # 4) 모드 전환 (R2/L2 동시 조작)
+        # -------------------------------------------------
         EPS = 1e-5
 
         if abs(self.joy_r2 - 1.0) < EPS and abs(self.joy_l2 - 1.0) < EPS:
@@ -482,14 +573,15 @@ class Nodelet(Node):
             self.change_mode = 0
             self.target_pos1 = self.md.pos1
             self.target_pos2 = self.md.pos2
-            self.vel_input1 = 0.0
-            self.vel_input2 = 0.0
+            self.vel_input1  = 0.0
+            self.vel_input2  = 0.0
 
             self.JOY_CONTROL = not self.JOY_CONTROL
             if self.JOY_CONTROL:
                 self.get_logger().info("=== Joystick Control Mode ===")
             else:
                 self.get_logger().info("=== Auto Control Mode ===")
+
 
     def Lowpass_filter(self, vel_input, vel_input_1, alpha):
         return alpha * vel_input + (1 - alpha) * vel_input_1
