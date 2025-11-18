@@ -25,6 +25,14 @@ def generate_launch_description():
     )
     ld.add_action(joy_node)
 
+    base_main_node = Node(
+        package="serial_comm",
+        executable="imu_publihser_node",
+        name="imu_publihser_node",
+        output="screen"
+    )
+    ld.add_action(base_main_node)
+
     # 3) URDF 로딩 후 robot_state_publisher
     pkg_path = get_package_share_directory('robot_description')
     urdf_file = os.path.join(pkg_path, 'description', 'robot_description.urdf')

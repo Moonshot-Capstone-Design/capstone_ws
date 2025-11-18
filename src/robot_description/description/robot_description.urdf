@@ -73,6 +73,16 @@
     </visual>
   </link>
 
+  <link name="imu_link">
+    <visual name="imu_visual">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.02 0.02 0.01"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+  </link>
+
   <!-- ================= 왼쪽 / 오른쪽 바퀴 링크 ================= -->
   <!-- 기존 이름 유지: wheel_left_link / wheel_right_link -->
   <link name="wheel_left_link">
@@ -132,6 +142,14 @@
     <parent link="chassis"/>
     <child  link="lidar2_link"/>
     <origin xyz="-0.105 0.075 0.13" rpy="0 0 3.14159"/>
+  </joint>
+
+  <!-- 후방 LiDAR (yaw 180도) -->
+  <!-- 기존 이름 유지: lidar2_joint -->
+  <joint name="imu_joint" type="fixed">
+    <parent link="chassis"/>
+    <child  link="imu_link"/>
+    <origin xyz="-0.03 0.0 0.0" rpy="0 0 0"/>
   </joint>
 
   <!-- 왼쪽 바퀴: y축 continuous (기존 이름/축 유지) -->
