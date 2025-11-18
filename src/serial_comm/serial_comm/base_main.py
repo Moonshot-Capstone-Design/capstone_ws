@@ -438,7 +438,7 @@ class Nodelet(Node):
 
         gain = self.gain_list[self.gain_count]
         self.joy_fb *= gain
-        self.joy_lr *= gain
+        self.joy_lr *= gain * 0.5
 
         EPS = 1e-5
 
