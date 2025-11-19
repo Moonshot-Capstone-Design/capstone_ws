@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'serial_comm'
+package_name = 'robot_navigator'
 
 setup(
     name=package_name,
@@ -10,9 +10,6 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        ('share/' + package_name, ['launch/serial_comm.launch.py']),
-        ('share/' + package_name, ['launch/teleop_launch.launch.py']),
-
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -27,9 +24,6 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'imu_publisher_node = serial_comm.imu_publisher:main',
-            'base_main_node = serial_comm.base_main:main',
-            'test_md_teleop_node = serial_comm.test_md_teleop:main',
         ],
     },
 )

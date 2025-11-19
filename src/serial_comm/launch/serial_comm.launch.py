@@ -27,8 +27,8 @@ def generate_launch_description():
 
     base_main_node = Node(
         package="serial_comm",
-        executable="imu_publihser_node",
-        name="imu_publihser_node",
+        executable="imu_publisher_node",
+        name="imu_publisher_node",
         output="screen"
     )
     ld.add_action(base_main_node)

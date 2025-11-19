@@ -8,11 +8,11 @@ from ament_index_python.packages import get_package_share_directory
 def generate_launch_description():
     return LaunchDescription([
         # First Launch: serial_test
-        # IncludeLaunchDescription(
-        #     PythonLaunchDescriptionSource([os.path.join(
-        #         get_package_share_directory('serial_comm')),
-        #         '/serial_comm.launch.py'])
-        # ),        # Second Launch: sllidar_ros2 after 5 seconds
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource([os.path.join(
+                get_package_share_directory('serial_comm')),
+                '/serial_comm.launch.py'])
+        ),        # Second Launch: sllidar_ros2 after 5 seconds
         TimerAction(
             period=2.0,
             actions=[

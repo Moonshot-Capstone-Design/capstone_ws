@@ -24,7 +24,7 @@ except:
 class EbimuPublisher(Node):
 
 	def __init__(self):
-		super().__init__('ebimu_publisher')
+		super().__init__('imu_publisher')
 		qos_profile = QoSProfile(depth=10)
 
 		self.publisher = self.create_publisher(String, 'ebimu_data', qos_profile)
