@@ -85,6 +85,8 @@ class Nodelet(Node):
         self.pose_y = 0.0
         self.pose_theta = 0.0
         self.last_time = self.get_clock().now()
+        # odom -> base_link yaw offset (z축 기준 180도 회전)
+        self.yaw_offset = np.pi
 
         # accumulated_distance
         self.accumulated_distance = 0.0
@@ -208,7 +210,7 @@ class Nodelet(Node):
 
             self.marker_detected = False
 
-            self.md.send_position_cmd(int(self.target_pos1), int(self.target_pos2), int(60 * 4.33), int(60 * 4.33))
+            self.md.send_position_cmd(int(self.target_pos1), int(self.target_pos2), int(60), int(60))
 
             self.msg_wheelmotor.target1 = int(self.target_pos1)
             self.msg_wheelmotor.target2 = int(self.target_pos2)
@@ -228,8 +230,8 @@ class Nodelet(Node):
         rpm_left = -self.md.rpm1    # left wheel
         rpm_right = self.md.rpm2    # right wheel
 
-        self.msg_wheelmotor.v_x = (rpm_left + rpm_right) * np.pi * self.wheel_diameter / (60 * 2 * 4.33)
-        self.msg_wheelmotor.w_z = -(rpm_right - rpm_left) * np.pi * self.wheel_diameter / (60 * self.wheel_separation * 4.33)
+        self.msg_wheelmotor.v_x = (rpm_left + rpm_right) * np.pi * self.wheel_diameter / (60 * 2)
+        self.msg_wheelmotor.w_z = -(rpm_right - rpm_left) * np.pi * self.wheel_diameter / (60 * self.wheel_separation)
         # <<< 수정 끝
 
         self.pub.publish(self.msg_wheelmotor)
@@ -264,8 +266,8 @@ class Nodelet(Node):
         self.last_pos2 = self.cur_pos2
 
         # >>> 수정: 오돔용 엔코더 부호 보정 (왼쪽만 반전)
-        delta_left_enc = delta_pos1      # left wheel encoder (sign flipped)
-        delta_right_enc = -delta_pos2      # right wheel encoder as is
+        delta_left_enc = -delta_pos1      # left wheel encoder (sign flipped)
+        delta_right_enc = delta_pos2      # right wheel encoder as is
 
         left_wheel_disp = (delta_left_enc / self.md.encoder_gain) * (np.pi * self.wheel_diameter)
         right_wheel_disp = (delta_right_enc / self.md.encoder_gain) * (np.pi * self.wheel_diameter)
@@ -297,11 +299,10 @@ class Nodelet(Node):
         self.amr_data_distance.publish(amr_data_distance_)
 
         # 오돔 메시지 발행
-        # 오돔 메시지 발행
         odom_msg = Odometry()
         odom_msg.header.stamp = current_time.to_msg()
         odom_msg.header.frame_id = 'odom'
-        odom_msg.child_frame_id = 'wheel_axis'  # 오도메트리 기준 프레임
+        odom_msg.child_frame_id = 'base_link'
         odom_msg.pose.pose.position.x = self.pose_x
         odom_msg.pose.pose.position.y = self.pose_y
 
@@ -315,41 +316,19 @@ class Nodelet(Node):
 
         self.odom_pub.publish(odom_msg)
 
-        # ================= TF 브로드캐스트 ================= #
-
-        # 1) TF (odom → wheel_axis)
-        tf_odom_wheel = TransformStamped()
-        tf_odom_wheel.header.stamp = current_time.to_msg()
-        tf_odom_wheel.header.frame_id = 'odom'
-        tf_odom_wheel.child_frame_id = 'wheel_axis'
-        tf_odom_wheel.transform.translation.x = self.pose_x
-        tf_odom_wheel.transform.translation.y = self.pose_y
-        tf_odom_wheel.transform.translation.z = 0.0
-        tf_odom_wheel.transform.rotation.x = q[0]
-        tf_odom_wheel.transform.rotation.y = q[1]
-        tf_odom_wheel.transform.rotation.z = q[2]
-        tf_odom_wheel.transform.rotation.w = q[3]
-        self.tf_broadcaster.sendTransform(tf_odom_wheel)
-
-        # 2) TF (wheel_axis → base_link)
-        tf_wheel_base = TransformStamped()
-        tf_wheel_base.header.stamp = current_time.to_msg()
-        tf_wheel_base.header.frame_id = 'wheel_axis'
-        tf_wheel_base.child_frame_id = 'base_link'
-
-        # URDF 상에서 wheel_axis(두 바퀴 중심)가 base_link보다 x = -0.14 위치라면,
-        # base_link는 wheel_axis 기준 x = +0.14 에 있으므로 이렇게 둔다.
-        tf_wheel_base.transform.translation.x = 0.14   # 필요하면 부호/값은 실측해서 조정
-        tf_wheel_base.transform.translation.y = 0.0
-        tf_wheel_base.transform.translation.z = 0.0
-
-        qx, qy, qz, qw = quaternion_from_euler(0, 0, 0)
-        tf_wheel_base.transform.rotation.x = qx
-        tf_wheel_base.transform.rotation.y = qy
-        tf_wheel_base.transform.rotation.z = qz
-        tf_wheel_base.transform.rotation.w = qw
-
-        self.tf_broadcaster.sendTransform(tf_wheel_base)
+        # TF (odom → base_link)
+        transform = TransformStamped()
+        transform.header.stamp = current_time.to_msg()
+        transform.header.frame_id = 'odom'
+        transform.child_frame_id = 'base_link'
+        transform.transform.translation.x = self.pose_x
+        transform.transform.translation.y = self.pose_y
+        transform.transform.translation.z = 0.
+        transform.transform.rotation.x = q[0]
+        transform.transform.rotation.y = q[1]
+        transform.transform.rotation.z = q[2]
+        transform.transform.rotation.w = q[3]
+        self.tf_broadcaster.sendTransform(transform)
 
     def transform_pose_to_map(self, x, y, theta, transform):
         tx = transform.translation.x
