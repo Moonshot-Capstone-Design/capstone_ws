@@ -27,7 +27,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'imu_publisher_node = serial_comm.imu_publisher:main',
+            'imu_publisher_node = serial.comm.imu_publisher:main',
             'base_main_node = serial_comm.base_main:main',
             'test_md_teleop_node = serial_comm.test_md_teleop:main',
         ],
