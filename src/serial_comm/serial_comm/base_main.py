@@ -85,8 +85,9 @@ class Nodelet(Node):
         self.pose_y = 0.0
         self.pose_theta = 0.0
         self.last_time = self.get_clock().now()
-        # odom -> base_link yaw offset (z축 기준 180도 회전)
-        self.yaw_offset = np.pi
+        # odom -> base_link yaw offset (프레임 정렬용, rad. 기본 0)
+        self.declare_parameter('yaw_offset', 0.0)
+        self.yaw_offset = self.get_parameter('yaw_offset').get_parameter_value().double_value
 
         # accumulated_distance
         self.accumulated_distance = 0.0
@@ -278,21 +279,36 @@ class Nodelet(Node):
         dt = (current_time - self.last_time).nanoseconds / 1e9
         self.last_time = current_time
 
-        # 선속도 / 각속도
-        linear_velocity = (left_wheel_disp + right_wheel_disp) / (2.0 * dt)
-        angular_velocity = -(right_wheel_disp - left_wheel_disp) / (self.wheel_separation * dt)
+        # 선속도 / 각속도 (바디 프레임)
+        linear_velocity_body = (left_wheel_disp + right_wheel_disp) / (2.0 * dt)
+        angular_velocity_body = -(right_wheel_disp - left_wheel_disp) / (self.wheel_separation * dt)
 
-        # 포즈 적분
-        self.pose_x += linear_velocity * np.cos(self.pose_theta) * dt
-        self.pose_y += linear_velocity * np.sin(self.pose_theta) * dt
-        self.pose_theta += angular_velocity * dt
+        # 포즈 적분 (바디 프레임 기준)
+        self.pose_x += linear_velocity_body * np.cos(self.pose_theta) * dt
+        self.pose_y += linear_velocity_body * np.sin(self.pose_theta) * dt
+        self.pose_theta += angular_velocity_body * dt
         if self.pose_theta > np.pi:
             self.pose_theta = self.pose_theta - (2 * np.pi)
         if self.pose_theta < -np.pi:
             self.pose_theta = self.pose_theta + (2 * np.pi)
 
+        # 프레임 오프셋 회전 적용 (nav2 기준)
+        cos_off = np.cos(self.yaw_offset)
+        sin_off = np.sin(self.yaw_offset)
+        pose_x_nav = self.pose_x * cos_off - self.pose_y * sin_off
+        pose_y_nav = self.pose_x * sin_off + self.pose_y * cos_off
+        theta_nav = self.pose_theta + self.yaw_offset
+        if theta_nav > np.pi:
+            theta_nav -= 2 * np.pi
+        if theta_nav < -np.pi:
+            theta_nav += 2 * np.pi
+
+        # twist도 동일 회전 적용 (child_frame 기준)
+        linear_velocity_nav_x = linear_velocity_body * cos_off
+        linear_velocity_nav_y = linear_velocity_body * sin_off
+
         # 누적 거리
-        self.accumulated_distance += np.fabs(linear_velocity) * dt
+        self.accumulated_distance += np.fabs(linear_velocity_body) * dt
         amr_data_distance_ = String()
         amr_msg_string = f"{self.accumulated_distance:.3f} (m)"
         amr_data_distance_.data = amr_msg_string
@@ -303,16 +319,17 @@ class Nodelet(Node):
         odom_msg.header.stamp = current_time.to_msg()
         odom_msg.header.frame_id = 'odom'
         odom_msg.child_frame_id = 'base_link'
-        odom_msg.pose.pose.position.x = self.pose_x
-        odom_msg.pose.pose.position.y = self.pose_y
+        odom_msg.pose.pose.position.x = pose_x_nav
+        odom_msg.pose.pose.position.y = pose_y_nav
 
-        q = quaternion_from_euler(0, 0, self.pose_theta)
+        q = quaternion_from_euler(0, 0, theta_nav)
         odom_msg.pose.pose.orientation.x = q[0]
         odom_msg.pose.pose.orientation.y = q[1]
         odom_msg.pose.pose.orientation.z = q[2]
         odom_msg.pose.pose.orientation.w = q[3]
-        odom_msg.twist.twist.linear.x = linear_velocity
-        odom_msg.twist.twist.angular.z = angular_velocity
+        odom_msg.twist.twist.linear.x = linear_velocity_nav_x
+        odom_msg.twist.twist.linear.y = linear_velocity_nav_y
+        odom_msg.twist.twist.angular.z = angular_velocity_body
 
         self.odom_pub.publish(odom_msg)
 
@@ -321,8 +338,8 @@ class Nodelet(Node):
         transform.header.stamp = current_time.to_msg()
         transform.header.frame_id = 'odom'
         transform.child_frame_id = 'base_link'
-        transform.transform.translation.x = self.pose_x
-        transform.transform.translation.y = self.pose_y
+        transform.transform.translation.x = pose_x_nav
+        transform.transform.translation.y = pose_y_nav
         transform.transform.translation.z = 0.
         transform.transform.rotation.x = q[0]
         transform.transform.rotation.y = q[1]
