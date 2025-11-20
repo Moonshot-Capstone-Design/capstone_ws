@@ -280,7 +280,7 @@ class Nodelet(Node):
         self.last_time = current_time
 
         # 선속도 / 각속도 (바디 프레임)
-        linear_velocity_body = (left_wheel_disp + right_wheel_disp) / (2.0 * dt)
+        linear_velocity_body = -(left_wheel_disp + right_wheel_disp) / (2.0 * dt)
         angular_velocity_body = -(right_wheel_disp - left_wheel_disp) / (self.wheel_separation * dt)
 
         # 포즈 적분 (바디 프레임 기준)
