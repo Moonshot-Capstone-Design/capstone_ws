@@ -85,8 +85,6 @@ class Nodelet(Node):
         self.pose_y = 0.0
         self.pose_theta = 0.0
         self.last_time = self.get_clock().now()
-        # odom -> base_link yaw offset (z축 기준 180도 회전)
-        self.yaw_offset = np.pi
 
         # accumulated_distance
         self.accumulated_distance = 0.0
@@ -265,7 +263,7 @@ class Nodelet(Node):
         self.last_pos1 = self.cur_pos1
         self.last_pos2 = self.cur_pos2
 
-        # >>> 수정: 오돔용 엔코더 부호 보정 (왼쪽만 반전)
+        # >>> 오돔용 엔코더 부호 보정: 모터 드라이버가 왼쪽 엔코더를 반대로 보고하므로 왼쪽만 반전
         delta_left_enc = -delta_pos1      # left wheel encoder (sign flipped)
         delta_right_enc = delta_pos2      # right wheel encoder as is
 
@@ -279,7 +277,7 @@ class Nodelet(Node):
         self.last_time = current_time
 
         # 선속도 / 각속도
-        linear_velocity = -(left_wheel_disp + right_wheel_disp) / (2.0 * dt)
+        linear_velocity = (left_wheel_disp + right_wheel_disp) / (2.0 * dt)
         angular_velocity = -(right_wheel_disp - left_wheel_disp) / (self.wheel_separation * dt)
 
         # 포즈 적분
@@ -363,7 +361,7 @@ class Nodelet(Node):
             velocity_right = (linear_velocity + (self.wheel_separation / 2.0) * angular_velocity)
             velocity_left = (linear_velocity - (self.wheel_separation / 2.0) * angular_velocity)
 
-            encoder_delta_right = (velocity_right * control_dt * self.md.encoder_gain) / (np.pi * self.wheel_diameter)
+            encoder_delta_right = -(velocity_right * control_dt * self.md.encoder_gain) / (np.pi * self.wheel_diameter)
             encoder_delta_left = (velocity_left * control_dt * self.md.encoder_gain) / (np.pi * self.wheel_diameter)
 
             self.target_pos1 += encoder_delta_left
