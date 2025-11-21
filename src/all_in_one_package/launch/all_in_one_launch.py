@@ -12,7 +12,8 @@ def generate_launch_description():
             PythonLaunchDescriptionSource([os.path.join(
                 get_package_share_directory('serial_comm')),
                 '/serial_comm.launch.py'])
-        ),        # Second Launch: sllidar_ros2 after 5 seconds
+        ),
+        # Second Launch: sllidar_ros2 after 2 seconds
         TimerAction(
             period=2.0,
             actions=[
@@ -24,7 +25,7 @@ def generate_launch_description():
             ]
         ),
 
-        # Third Launch: ros2_laser_scan_merger after 10 seconds
+        # Third Launch: ros2_laser_scan_merger after 4 seconds
         TimerAction(
             period=4.0,
             actions=[
@@ -35,4 +36,38 @@ def generate_launch_description():
                 ),
             ]
         ),
+        # Fourth Launch: amr localization_launch after 6 seconds
+        TimerAction(
+            period=6.0,
+            actions=[
+                IncludeLaunchDescription(
+                    PythonLaunchDescriptionSource(
+                        os.path.join(
+                            get_package_share_directory('robot_navigator'),
+                            'launch',
+                            'nav2_bringup',
+                            'localization_launch.py'
+                        )
+                    ),
+                    launch_arguments={'map': os.path.expandvars('$HOME/capstone_ws/src/robot_navigator/map/mymap.yaml')}.items(),
+                ),
+            ]
+        ),
+
+        # Fifth Launch: amr navigation_launch after 8 seconds
+        TimerAction(
+            period=8.0,
+            actions=[
+                IncludeLaunchDescription(
+                    PythonLaunchDescriptionSource(
+                        os.path.join(
+                            get_package_share_directory('robot_navigator'),
+                            'launch',
+                            'nav2_bringup',
+                            'navigation_launch.py'
+                        )
+                    ),
+                ),
+            ]
+        )
     ])
