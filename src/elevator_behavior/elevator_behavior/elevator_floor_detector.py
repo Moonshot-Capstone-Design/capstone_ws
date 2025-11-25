@@ -49,7 +49,7 @@ class ElevatorFloorNode(Node):
     """
 
     def __init__(self):
-        super().__init__('elevator_floor_node')
+        super().__init__('elevator_floor_detector')
 
         # -------------------------------
         # 파라미터 / 설정
@@ -186,10 +186,10 @@ class ElevatorFloorNode(Node):
             # ------------------------------
             # 연속 상태 세기 (원본 로직)
             # ------------------------------
-            if state == "올라갑니다":
+            if state == "가속도 방향 ↑":
                 self.consecutive_up += 1
                 self.consecutive_down = 0
-            elif state == "내려갑니다":
+            elif state == "가속도 방향 ↓":
                 self.consecutive_down += 1
                 self.consecutive_up = 0
             else:
@@ -283,7 +283,7 @@ class ElevatorFloorNode(Node):
             #    (종료 처리 후에 체크)  ─ 원본 로직
             # ------------------------------
             if not self.timer_running:
-                if state == "올라갑니다" and self.consecutive_up >= 3:
+                if state == "가속도 방향 ↑" and self.consecutive_up >= 3:
                     self.elevator_mode = "UP"
                     self.timer_running = True
                     self.timer_start_time = now
@@ -294,7 +294,7 @@ class ElevatorFloorNode(Node):
                     print(msg_txt)
                     self.get_logger().info(msg_txt)
 
-                elif state == "내려갑니다" and self.consecutive_down >= 3:
+                elif state == "가속도 방향 ↓" and self.consecutive_down >= 3:
                     self.elevator_mode = "DOWN"
                     self.timer_running = True
                     self.timer_start_time = now
