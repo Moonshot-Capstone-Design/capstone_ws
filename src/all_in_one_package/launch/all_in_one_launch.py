@@ -49,7 +49,7 @@ def generate_launch_description():
                             'localization_launch.py'
                         )
                     ),
-                    launch_arguments={'map': os.path.expandvars('$HOME/capstone_ws/src/robot_navigator/map/mymap.yaml')}.items(),
+                    launch_arguments={'map': os.path.expandvars('$HOME/capstone_ws/src/robot_navigator/map/2f.yaml')}.items(),
                 ),
             ]
         ),
