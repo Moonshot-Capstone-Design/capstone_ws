@@ -32,7 +32,7 @@ class ElevatorDoorROIDetector(Node):
         # roi_center_deg: direction to door (0 = front, +CCW)
         # roi_width_deg : total width of ROI
         # 👉 기본값을 전방(0deg)으로 세팅
-        self.declare_parameter('roi_center_deg', 180.0)
+        self.declare_parameter('roi_center_deg', 140.0)
         self.declare_parameter('roi_width_deg', 30.0)
 
         # Door distance model (meters)

@@ -115,35 +115,24 @@ controller_server:
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.5
     min_theta_velocity_threshold: 0.001
-
     progress_checker_plugin: "progress_checker"
     goal_checker_plugin: "goal_checker"
     controller_plugins: ["FollowPath"]
 
+    # Progress checker parameters
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
       required_movement_radius: 0.5
       movement_time_allowance: 10.0
-
+    # Goal checker parameters
     goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
       xy_goal_tolerance: 0.2
       yaw_goal_tolerance: 0.2
       stateful: True
-
-    # 🔧 RotationShimController 적용 구간
+    # DWB parameters
     FollowPath:
-      plugin: "nav2_rotation_shim_controller::RotationShimController"  # 🔧 Shim: DWB 앞에 회전 보정 계층
-      primary_controller: "dwb_core::DWBLocalPlanner"                  # 🔧 Shim: 내부 실제 로컬 플래너 타입
-      angular_dist_threshold: 0.785         # 🔧 Shim: 이 각도(≈45도) 이상 차이 날 때 제자리 회전 모드 진입
-      # angular_disengage_threshold: 0.3925  # 🔧 Shim: Iron 이후 옵션. Humble에선 미지원 가능성 있어 일단 비활성화
-      forward_sampling_distance: 0.5        # 🔧 Shim: 회전 후 전방 샘플링 거리
-      rotate_to_heading_angular_vel: 1.0    # 🔧 Shim: 회전 속도 (rad/s) - 로봇 특성에 맞게 튜닝
-      max_angular_accel: 0.5                # 🔧 Shim: 회전 가속도 제한
-      simulate_ahead_time: 1.0              # 🔧 Shim: 회전 경로 시뮬레이션 시간
-      rotate_to_goal_heading: false         # 🔧 Shim: goal 지점에서 추가 정렬 여부
-
-      # 🧭 아래부터는 네가 원래 쓰던 DWB 로컬 플래너 파라미터 (값 그대로 유지)
+      plugin: "dwb_core::DWBLocalPlanner"
       debug_trajectory_details: True
       min_vel_x: 0.0
       min_vel_y: 0.0
@@ -191,6 +180,7 @@ controller_server:
       RotateToGoal.scale: 32.0
       RotateToGoal.slowing_factor: 5.0
       RotateToGoal.lookahead_time: -1.0
+
 controller_server_rclcpp_node:
   ros__parameters:
     use_sim_time: False
@@ -297,7 +287,7 @@ map_server:
   ros__parameters:
     use_sim_time: False
     # yaml_filename: "turtlebot3_world.yaml"
-    yaml_filename: "2f.yaml"
+    yaml_filename: "mymap.yaml"
 
 map_saver:
   ros__parameters:
