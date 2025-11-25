@@ -1,12 +1,11 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, EnvironmentVariable
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
-    # launch arg
     params_file_arg = DeclareLaunchArgument(
         'params_file',
         default_value=PathJoinSubstitution([
@@ -28,8 +27,8 @@ def generate_launch_description():
 
     navigator_node = Node(
         package='robot_navigator',
-        executable='navigator_node',          # setup.py entrypoint or installed exec name
-        name='navigator_node',
+        executable='navigator_node',
+        name='navigator',                # ★ 여기!
         output='screen',
         parameters=[
             params_file,
