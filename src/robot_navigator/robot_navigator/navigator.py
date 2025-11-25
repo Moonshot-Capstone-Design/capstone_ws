@@ -2,6 +2,7 @@ import math
 import rclpy
 from rclpy.node import Node
 from rclpy.action import ActionClient
+from rclpy.parameter import Parameter
 from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped
 from nav2_msgs.action import NavigateToPose
@@ -30,11 +31,23 @@ class Navigator(Node):
             automatically_declare_parameters_from_overrides=True
         )
 
-        self.action_server_name = self.get_parameter_or('action_server_name', 'navigate_to_pose')
-        self.cmd_topic = self.get_parameter_or('cmd_topic', 'destination')
+        # ★ 여기 수정: Parameter 객체에서 .value만 꺼낸다
+        action_param = self.get_parameter_or(
+            'action_server_name',
+            Parameter('action_server_name', Parameter.Type.STRING, 'navigate_to_pose')
+        )
+        cmd_param = self.get_parameter_or(
+            'cmd_topic',
+            Parameter('cmd_topic', Parameter.Type.STRING, 'destination')
+        )
 
+        self.action_server_name = action_param.value   # str
+        self.cmd_topic = cmd_param.value               # str
+
+        # Nav2 액션 클라이언트
         self.client = ActionClient(self, NavigateToPose, self.action_server_name)
 
+        # 목적지 명령 구독 (std_msgs/String)
         self.cmd_sub = self.create_subscription(
             String,
             self.cmd_topic,
@@ -53,7 +66,9 @@ class Navigator(Node):
         # 서버 준비 체크 타이머 (blocking 피하기)
         self.ready_timer = self.create_timer(0.5, self.check_server_ready)
 
-        self.get_logger().info(f'Navigator up. cmd_topic={self.cmd_topic}, action={self.action_server_name}')
+        self.get_logger().info(
+            f'Navigator up. cmd_topic={self.cmd_topic}, action={self.action_server_name}'
+        )
         self.get_logger().info(f'Loaded points: {list(self.points.keys())}')
 
     def load_points(self):
@@ -94,7 +109,9 @@ class Navigator(Node):
         self.get_logger().info(f'Received cmd: {cmd}')
 
         if cmd not in self.points:
-            self.get_logger().warn(f'Unknown cmd "{cmd}". Known: {list(self.points.keys())}')
+            self.get_logger().warn(
+                f'Unknown cmd "{cmd}". Known: {list(self.points.keys())}'
+            )
             return
 
         # 서버 준비 안 됐으면 보류
@@ -156,7 +173,9 @@ class Navigator(Node):
         elif status == GoalStatus.STATUS_ABORTED:
             self.get_logger().warn(f'Goal aborted: {cmd}')
         else:
-            self.get_logger().warn(f'Goal finished with status={status} for cmd={cmd}')
+            self.get_logger().warn(
+                f'Goal finished with status={status} for cmd={cmd}'
+            )
 
         self.reset_goal_state()
 
@@ -172,7 +191,9 @@ class Navigator(Node):
         if self.goal_handle is None:
             return
         cancel_future = self.goal_handle.cancel_goal_async()
-        cancel_future.add_done_callback(lambda fut: self.get_logger().info('Cancel requested.'))
+        cancel_future.add_done_callback(
+            lambda fut: self.get_logger().info('Cancel requested.')
+        )
 
     def reset_goal_state(self):
         self.goal_in_progress = False
