@@ -47,6 +47,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'navigator_node = robot_navigator.navigator:main'
         ],
     },
 )
