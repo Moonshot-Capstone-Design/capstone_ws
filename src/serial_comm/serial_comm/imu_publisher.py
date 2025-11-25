@@ -13,7 +13,7 @@ NUM_RE = re.compile(r'[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?')
 
 class EbimuPublisher(Node):
     def __init__(self):
-        super().__init__('ebimu_publisher')
+        super().__init__('imu_publisher_node')
 
         # 파라미터 (한 줄 실행 가능)
         self.declare_parameter('port', '/dev/ttyUSB_IMU')
