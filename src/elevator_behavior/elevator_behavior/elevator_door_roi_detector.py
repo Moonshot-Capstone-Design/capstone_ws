@@ -33,7 +33,7 @@ class ElevatorDoorROIDetector(Node):
         # ROI definition (degrees, base_link frame)
         # roi_center_deg: direction to door (0 = front, +CCW)
         # roi_width_deg : total width of ROI
-        self.declare_parameter('roi_center_deg', 0.0)
+        self.declare_parameter('roi_center_deg', 180.0)
         self.declare_parameter('roi_width_deg', 30.0)
 
         # Door distance model (meters)
