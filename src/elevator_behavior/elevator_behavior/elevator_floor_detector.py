@@ -7,7 +7,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 from sensor_msgs.msg import Imu
-from std_msgs.msg import Int32
+from std_msgs.msg import Int32, Bool
 
 
 # -------------------------------
@@ -35,18 +35,6 @@ def index_to_label(i: int) -> str:
 
 
 class ElevatorFloorNode(Node):
-    """
-    기존에 시리얼(COM7)로 EBIMU 데이터를 읽어서
-    - 0.5초 윈도우마다 z_acc 통계를 내고
-    - "올라갑니다 / 내려갑니다 / 올라가지도 내려가지도 않습니다" 상태를 판단한 뒤
-    - 연속 상태와 타이머(상승/하강 시간)로 층수를 추정하던 로직을
-
-    ROS 2 IMU 토픽(/ebimu/imu) 구독 기반으로 그대로 옮긴 노드입니다.
-
-    시리얼 부분만 ROS 2 구독으로 바꾸고,
-    ACC_Z_THRESHOLD, THRESH_COUNT, WINDOW, 타이머/층수 로직,
-    로그 문구(올라갑니다/내려갑니다/타이머 시작/종료/경과 시간 등)는 유지합니다.
-    """
 
     def __init__(self):
         super().__init__('elevator_floor_detector')
@@ -58,6 +46,17 @@ class ElevatorFloorNode(Node):
         imu_topic = self.get_parameter(
             'imu_topic'
         ).get_parameter_value().string_value
+
+        # --- 새 파라미터: 시작/목적 층, 플래그 토픽 ---
+        self.declare_parameter('start_floor_idx', 1)     # 0=B1, 1=1F, ...
+        self.declare_parameter('dest_floor_idx', 3)      # 예: 3F
+        self.declare_parameter('out_flag_topic', '/elevator/out_flag')
+        self.declare_parameter('auto_start', True)
+
+        start_floor_idx = int(self.get_parameter('start_floor_idx').value)
+        dest_floor_idx = int(self.get_parameter('dest_floor_idx').value)
+        self.out_flag_topic = self.get_parameter('out_flag_topic').value
+        auto_start = bool(self.get_parameter('auto_start').value)
 
         # 원본 코드에서 사용하던 상수들 (건들지 않음)
         self.ACC_Z_THRESHOLD = 0.02   # z_acc 임계값
@@ -105,6 +104,7 @@ class ElevatorFloorNode(Node):
         # 퍼블리시는 기본 QoS로 충분
         # Int32 값은 "내부 인덱스" (0=B1, 1=1F, ..., 5=5F)
         self.pub_floor = self.create_publisher(Int32, 'current_floor', 10)
+        self.pub_out_flag = self.create_publisher(Bool, self.out_flag_topic, 10)
 
         self.get_logger().info(
             f"[ElevatorFloorNode] IMU topic='{imu_topic}', "
@@ -339,8 +339,17 @@ class ElevatorFloorNode(Node):
             msg_txt = f"목적층인 {label}층에 도달했습니다."
             print(msg_txt)
             self.get_logger().info(msg_txt)
-            # 필요하면 여기서 self.active = False 로 추정 멈출 수 있음
-            # self.active = False
+
+            # >>> 여기서 FSM에게 알리는 플래그 전송 <<<
+            flag_msg = Bool()
+            flag_msg.data = True
+            self.pub_out_flag.publish(flag_msg)
+            self.get_logger().info(
+                f"[ElevatorFloorNode] out_flag=True publish on '{self.out_flag_topic}'"
+            )
+
+            # 한 세션 종료 (필요하면 다음 세션 준비는 바깥에서)
+            self.active = False
 
 
 # -------------------------------
