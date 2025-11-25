@@ -12,7 +12,7 @@ def generate_launch_description():
         default_value=PathJoinSubstitution([
             FindPackageShare('robot_navigator'),
             'params',
-            'points.yaml'
+            'points7.yaml'
         ]),
         description='Path to navigator parameter file'
     )
