@@ -24,7 +24,11 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'elevator_door_roi_detector_node = elevator_door_roi_detector:main'
+            'elevator_door_roi_detector_node = elevator_behavior.elevator_door_roi_detector:main',
+            'elevator_spot_detector_node = elevator_behavior.elevator_spot_detector:main',
+            'elevator_floor_detector_node = elevator_behavior.elevator_floor_detector:main'
+            'elevator_in_and_out_node = elevator_behavior.elevator_in_and_out:main',
+
         ],
     },
 )
