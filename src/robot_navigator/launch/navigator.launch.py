@@ -35,8 +35,8 @@ def generate_launch_description():
 
     navigator_node = Node(
         package='robot_navigator',
-        executable='navigator',          # setup.py entrypoint or installed exec name
-        name='navigator',
+        executable='navigator_node',          # setup.py entrypoint or installed exec name
+        name='navigator_node',
         namespace=namespace,
         output='screen',
         parameters=[
