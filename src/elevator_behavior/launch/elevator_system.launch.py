@@ -18,16 +18,15 @@ def generate_launch_description():
     start_floor_arg = DeclareLaunchArgument(
         'start_floor_idx',
         default_value='1',   # 0=B1, 1=1F, 2=2F, ...
-        description='엘리베이터 시작 층 인덱스 (0=B1, 1=1F, ..., 5=5F)'
+        description='엘리베이터 시작 층 인덱스 (B1, 1, ..., 5=)'
     )
 
     dest_floor_arg = DeclareLaunchArgument(
         'dest_floor_idx',
         default_value='3',
-        description='엘리베이터 목적 층 인덱스 (0=B1, 1=1F, ..., 5=5F)'
+        description='엘리베이터 목적 층 인덱스 (B1, 1, ..., 5)'
     )
 
-    use_sim_time = LaunchConfiguration('use_sim_time')
     start_floor_idx = LaunchConfiguration('start_floor_idx')
     dest_floor_idx = LaunchConfiguration('dest_floor_idx')
 
