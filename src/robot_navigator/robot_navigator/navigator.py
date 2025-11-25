@@ -30,8 +30,8 @@ class Navigator(Node):
             automatically_declare_parameters_from_overrides=True
         )
 
-        self.action_server_name = self.get_parameter_or('action_server_name', 'navigate_to_pose').value
-        self.cmd_topic = self.get_parameter_or('cmd_topic', 'destination').value
+        self.action_server_name = self.get_parameter_or('action_server_name', 'navigate_to_pose')
+        self.cmd_topic = self.get_parameter_or('cmd_topic', 'destination')
 
         self.client = ActionClient(self, NavigateToPose, self.action_server_name)
 
